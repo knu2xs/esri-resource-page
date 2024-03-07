@@ -59,6 +59,7 @@ GOTO %1
 	git commit -m "update sitreps"
 	git pull
 	git push
+    GOTO end
 
 :end
     EXIT /B
