@@ -55,12 +55,12 @@ GOTO %1
 
 :: Update sitreps
 :update
+    cd %PROJECT_DIR%
 	git add -A
 	git commit -m "update sitreps"
 	git pull
 	git push
-    conda run -p ./env mkdocs build
-    move ./site/* "%SystemDrive%\inetpub\wwwroot"
+    conda run -p ./env mkdocs build --site-dir "%SystemDrive%\inetpub\wwwroot"
     GOTO end
 
 :end

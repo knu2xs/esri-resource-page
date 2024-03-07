@@ -9,6 +9,7 @@ theme:
     scheme: slate
 
 nav:
+  - Landing Page: index.md
   - Situational Reports:
     - sitreps/index.md
 
