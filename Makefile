@@ -37,7 +37,7 @@ update:
 	git commit -m "update sitreps"
 	git pull
 	git push
-	# conda run -p ./env mkdocs build
+# conda run -p ./env mkdocs build
 
 #################################################################################
 # PROJECT RULES                                                                 #
