@@ -53,5 +53,12 @@ GOTO %1
     CALL conda env remove -p %CONDA_DIR% -y
 	GOTO end
 
+:: Update sitreps
+:update
+	git add -A
+	git commit -m "update sitreps"
+	git pull
+	git push
+
 :end
     EXIT /B

@@ -34,6 +34,9 @@ remove_env:
 
 ## get and push updates
 update:
+	git add -A
+	git commit -m "update sitreps"
+	git pull
 	git push
 
 #################################################################################
