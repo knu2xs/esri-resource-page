@@ -1,4 +1,4 @@
-# Joel's Resource Landing Page
+# Joel's Resource Page
 
 ## Project Documentation
 

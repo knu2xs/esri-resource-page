@@ -1,10 +1,8 @@
-site_name: Joel's Resource Landing Page
+site_name: Joel's Resource Page
 
 theme:
   name: material
   logo: assets/globe.png
-  features:
-    - header.autohide
   palette:
     scheme: slate
     primary: black
