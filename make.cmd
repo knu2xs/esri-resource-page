@@ -55,6 +55,7 @@ GOTO %1
 
 :: Update sitreps
 :update
+    cd %PROJECT_DIR%
 	git add -A
 	git commit -m "update sitreps"
 	git pull
