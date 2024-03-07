@@ -20,7 +20,6 @@ clean:
 ## Build the docs
 docs:
 	conda run -p ./env mkdocs build
-	@echo ">>> Documents successfully built and saved to ./docs!"
 
 ## Build the local environment from the environment file
 env:
@@ -38,6 +37,7 @@ update:
 	git commit -m "update sitreps"
 	git pull
 	git push
+	conda run -p ./env mkdocs build
 
 #################################################################################
 # PROJECT RULES                                                                 #
