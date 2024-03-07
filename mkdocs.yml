@@ -10,7 +10,8 @@ theme:
 
 nav:
   - Landing Page: index.md
-  - sitreps/index.md
+  - Situational Reports:
+    - sitreps/index.md
 
 plugins:
   - search
