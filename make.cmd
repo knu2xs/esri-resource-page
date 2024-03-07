@@ -59,8 +59,7 @@ GOTO %1
 	git commit -m "update sitreps"
 	git pull
 	git push
-    conda run -p ./env mkdocs build
-    move ./site/* "%SystemDrive%\inetpub\wwwroot"
+    conda run -p ./env mkdocs build --site-dir "%SystemDrive%\inetpub\wwwroot"
     GOTO end
 
 :end
