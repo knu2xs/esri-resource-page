@@ -18,4 +18,5 @@ plugins:
   - blog:
       blog_dir: sitreps
       post_date_format: dd MMM YYYY
-      archive_date_format: yyyy MMM
+      archive_date_format: MMM yyyy
+      archive_url_date_format: yyyy/MM
