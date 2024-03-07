@@ -45,6 +45,7 @@ GOTO %1
 :env
     :: Create new environment from environment file
     CALL conda env create -p %CONDA_DIR% -f environment.yml
+    GOTO end
 
 :: Remove the environment
 :remove_env
