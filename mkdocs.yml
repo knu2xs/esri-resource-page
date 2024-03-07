@@ -7,6 +7,7 @@ theme:
     - header.autohide
   palette:
     scheme: slate
+    primary: black
 
 nav:
   - Landing Page: index.md
