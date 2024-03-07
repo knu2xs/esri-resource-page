@@ -61,6 +61,7 @@ GOTO %1
 	git push
     conda run -p ./env mkdocs build
     move ./site/* "%SystemDrive%\inetpub\wwwroot"
+    GOTO end
 
 :end
     EXIT /B

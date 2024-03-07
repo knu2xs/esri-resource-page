@@ -1,4 +1,4 @@
-.PHONY: data clean docs env env_remove jupyter env_build create_kernel test black
+.PHONY: clean docs env remove_env update
 
 #################################################################################
 # GLOBALS                                                                       #
