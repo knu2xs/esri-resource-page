@@ -28,8 +28,13 @@ env:
 	@echo ">>> New conda environment created. Activate with:\n- conda activate -p ./env"
 
 ## Make it easier to clean up the project when finished
-env_remove:
-	conda env remove -p ./env
+remove_env:
+	conda deactivate
+	conda env remove -p ./env -y
+
+## get and push updates
+update:
+	git push
 
 #################################################################################
 # PROJECT RULES                                                                 #
