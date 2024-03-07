@@ -1,0 +1,8 @@
+# python environment
+env
+
+# mac directory indices
+**/.DS_Store
+
+# mkdocs built site
+site

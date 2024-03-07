@@ -1,0 +1,19 @@
+site_name: Joel's Resource Landing Page
+
+theme:
+  name: material
+  logo: assets/globe.png
+  features:
+    - header.autohide
+  palette:
+    scheme: slate
+
+nav:
+  - Situational Reports:
+    - sitreps/index.md
+
+plugins:
+  - search
+  - blog:
+      blog_dir: sitreps
+      post_date_format: dd MMM YYYY
