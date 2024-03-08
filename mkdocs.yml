@@ -2,7 +2,7 @@ site_name: Joel's Resource Page
 
 theme:
   name: material
-  logo: assets/globe.png
+  logo: assets/esri-17GlobeLogo_tag-right_1CRev.png
   palette:
     scheme: slate
     primary: black
