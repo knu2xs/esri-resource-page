@@ -18,7 +18,6 @@
 - [Business Analyst Data Processing Project Board](https://github.com/orgs/ArcGIS/projects/163/views/1)
 - [Business Analyst Application Server (Geoenrichment) Project Board](https://github.com/orgs/ArcGIS/projects/23)
 - [Business Analyst Web Application Issues](https://github.com/ArcGIS/business-analyst-webapp/issues)
-
 - BA Pro
 
 #### BA-Data-Engineering
