@@ -7,12 +7,18 @@
 - [Index Creation](http://alienjoel/index-creation) (Simpson Diversity Index)
 - [Transit Accessibility Index](http://alienjoel/transit-accessibility-index)
 
-## Resources
+## Resouces
+
+- [Esri Enterprise Cloud Services (ECS)](https://ecsprd.esri.com/)
 
 ### GitHub
 
-- BA Content
-- BA Application Server (Geoenrichment)
+- [Business Analyst Content Issues](https://github.com/ArcGIS/business-analyst-content/issues)
+- [Business Analyst Content Release Project Board](https://github.com/orgs/ArcGIS/projects/68/views/6)
+- [Business Analyst Data Processing Project Board](https://github.com/orgs/ArcGIS/projects/163/views/1)
+- [Business Analyst Application Server (Geoenrichment) Project Board](https://github.com/orgs/ArcGIS/projects/23)
+- [Business Analyst Web Application Issues](https://github.com/ArcGIS/business-analyst-webapp/issues)
+
 - BA Pro
 
 #### BA-Data-Engineering
