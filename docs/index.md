@@ -10,6 +10,7 @@
 ## Resouces
 
 - [Esri Enterprise Cloud Services (ECS)](https://ecsprd.esri.com/)
+- [Big Data Toolkit Documentation](https://esrips.github.io/bdt3/index.htm)
 
 ### GitHub
 

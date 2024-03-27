@@ -13,6 +13,7 @@ nav:
   - Landing Page: index.md
   - Situational Reports:
     - sitreps/index.md
+  - GeoAnalytics Engine: geoanalytics.md
 
 plugins:
   - search
@@ -21,3 +22,11 @@ plugins:
       post_date_format: dd MMM YYYY
       archive_date_format: MMM yyyy
       archive_url_date_format: yyyy/MM
+
+markdown_extensions:
+  - pymdownx.highlight:
+      use_pygments: true
+      pygments_lang_class: true
+      linenums: true
+      anchor_linenums: true
+  - pymdownx.superfences
