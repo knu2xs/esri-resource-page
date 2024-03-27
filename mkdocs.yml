@@ -6,6 +6,8 @@ theme:
   palette:
     scheme: slate
     primary: black
+  features:
+    - content.code.copy
 
 nav:
   - Landing Page: index.md
