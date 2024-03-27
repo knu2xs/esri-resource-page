@@ -28,3 +28,4 @@
 ### Assets
 
 - [Esri Asset Share](https://esri.brand-portal.adobe.com/) (Brand > Emblems and Logos > Search for `.png`)
+- [Business Analyst Content Deliveries on Redstorage1](file:\\redstorage1\ba-data-content-deliveries)
