@@ -14,6 +14,7 @@ nav:
   - Situational Reports:
     - sitreps/index.md
   - GeoAnalytics Engine: geoanalytics.md
+  - Add H3 to ArcGIS Pro: add_h3_pro.md
 
 plugins:
   - search
