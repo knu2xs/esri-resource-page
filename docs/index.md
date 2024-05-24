@@ -6,6 +6,7 @@
 
 - [Index Creation](http://alienjoel/index-creation) (Simpson Diversity Index)
 - [Transit Accessibility Index](http://alienjoel/transit-accessibility-index)
+- [GTFS Publishing](http://alienjoel/gtfs-publishing/) (just Python API documentation)
 
 ## Resouces
 
