@@ -4,9 +4,9 @@
 
 ## Project Documentation
 
-- [Index Creation](http://alienjoel/index-creation) (Simpson Diversity Index)
-- [Transit Accessibility Index](http://alienjoel/transit-accessibility-index)
-- [GTFS Publishing](http://alienjoel/gtfs-publishing/) (just Python API documentation)
+- [Index Creation](http://alienjoel2024/index-creation) (Simpson Diversity Index)
+- [Transit Accessibility Index](http://alienjoel2024/transit-accessibility-index)
+- [GTFS Publishing](http://alienjoel2024/gtfs-publishing/) (just Python API documentation)
 
 ## Resouces
 
