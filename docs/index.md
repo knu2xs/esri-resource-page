@@ -9,7 +9,7 @@
 - [GTFS Publishing](http://alienjoel2024/gtfs-publishing/) (just Python API documentation)
 - [GTFS-Tools](http://alienjoel2024/gtfs-tools/)
 
-## Resouces
+## References
 
 - [Esri Enterprise Cloud Services (ECS)](https://ecsprd.esri.com/)
 - [Esri Enterprise Cloud Services - Next (ECS Next)](https://ecsnext.esri.com)
