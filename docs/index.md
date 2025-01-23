@@ -14,6 +14,8 @@
 - [Esri Enterprise Cloud Services (ECS)](https://ecsprd.esri.com/)
 - [Esri Enterprise Cloud Services - Next (ECS Next)](https://ecsnext.esri.com)
 - [Big Data Toolkit Documentation](https://esrips.github.io/bdt3/index.htm)
+- [Business Analyst on Compass](https://esriis.sharepoint.com/sites/BusinessAnalyst)
+- [Internal Job Postings](https://app7.greenhouse.io/internal_job_board?offices%5B%5D=4012415007&field_4480515007%5B%5D=7259365007)
 
 ### GitHub
 
