@@ -11,6 +11,7 @@
 
 ## References
 
+- [ArcGIS Assistant (PS Beta)](https://assistant.esri-ps.com/)
 - [Esri Enterprise Cloud Services (ECS)](https://ecsprd.esri.com/)
 - [Esri Enterprise Cloud Services - Next (ECS Next)](https://ecsnext.esri.com)
 - [Big Data Toolkit Documentation](https://esrips.github.io/bdt3/index.htm)
