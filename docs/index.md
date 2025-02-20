@@ -11,6 +11,7 @@
 
 ## References
 
+- [ArcGIS Business Analyst Web Local](https://baportal.esri.com/portal/apps/BA/esriBAOnPrem/)
 - [ArcGIS Assistant (PS Beta)](https://assistant.esri-ps.com/)
 - [Esri Enterprise Cloud Services (ECS)](https://ecsprd.esri.com/)
 - [Esri Enterprise Cloud Services - Next (ECS Next)](https://ecsnext.esri.com)
