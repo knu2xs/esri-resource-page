@@ -15,8 +15,11 @@ def main():
     # Get the current date
     today = date.today()
 
-    # get the date for this Friday
-    friday = today + timedelta(4 - today.weekday())
+    # get the date for this coming Friday
+    if today <= 4:
+        friday = today + timedelta(4 - today.weekday())
+    else:
+        friday = today + timedelta(6 - today.weekday())
 
     # Text for report header idnetifying date for mkdocs
     header_dt_str = friday.strftime("%Y-%m-%d")
