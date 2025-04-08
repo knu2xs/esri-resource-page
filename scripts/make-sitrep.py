@@ -35,7 +35,7 @@ def main():
         f"# SitRep {body_dt_str}\n\n"
         "## 1 - Critical Timebound Completed\n\n-\n\n"
         "## 2 - Other High Importance Completed\n\n-\n\n"
-        "## 3 - Shifting Priorities\n\n-\n\n"
+        "## 3 - Shifting Priorities\n\n"
         "#### Escalate\n\n-\n\n"
         "#### Diminish\n\n-\n\n"
     )
@@ -51,7 +51,7 @@ def main():
     report_path = posts_dir / f"sitrep_{file_dt_str}.md"
 
     # write the report to the file
-    with open(report_path, mode="w", encoding="utf-8") as report_file:
+    with open(report_path, mode="x", encoding="utf-8") as report_file:
         report_file.write(full_text)
 
 if __name__ == "__main__":
