@@ -24,12 +24,10 @@ docs:
 ## Build the local environment from the environment file
 env:
 	conda env create -p ./env -f environment.yml
-	@echo ">>> New conda environment created. Activate with:\n- conda activate -p ./env"
 
-## Make it easier to clean up the project when finished
-remove_env:
-	conda deactivate
-	conda env remove -p ./env -y
+## Create a new sitrep
+sitrep:
+	conda run -p ./env python scripts/make-sitrep.py
 
 ## get and push updates
 update:
