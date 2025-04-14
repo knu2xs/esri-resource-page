@@ -16,7 +16,7 @@ def main():
     today = date.today()
 
     # get the date for this coming Friday
-    if today <= 4:
+    if today.weekday() <= 4:
         friday = today + timedelta(4 - today.weekday())
     else:
         friday = today + timedelta(6 - today.weekday())
