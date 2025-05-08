@@ -17,6 +17,7 @@
 - [ArcGIS Pro Help (Development)](https://prodev.arcgis.com/en/pro-app/latest/help)
 - [Big Data Toolkit Documentation](https://esrips.github.io/bdt3/index.htm)
 - [Business Analyst Sharepoint](https://esriis.sharepoint.com/sites/BusinessAnalyst)
+- [Esri Managed File Tranfer (FTP) KB](https://esri.service-now.com/kb?id=kb_article_view&sysparm_article=KB0013194)
 - [Internal Job Postings](https://app7.greenhouse.io/internal_job_board?offices%5B%5D=4012415007&field_4480515007%5B%5D=7259365007)
 
 
