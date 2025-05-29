@@ -19,6 +19,7 @@
 - [Business Analyst Sharepoint](https://esriis.sharepoint.com/sites/BusinessAnalyst)
 - [Esri Managed File Tranfer (FTP) KB](https://esri.service-now.com/kb?id=kb_article_view&sysparm_article=KB0013194) (login using AVWorld credentials)
 - [Internal Job Postings](https://app7.greenhouse.io/internal_job_board?offices%5B%5D=4012415007&field_4480515007%5B%5D=7259365007)
+- [Blog Writing Resources](https://esriis.sharepoint.com/sites/Productwriters/Shared%20Documents/Forms/AllItems.aspx?id=%2Fsites%2FProductwriters%2FShared%20Documents%2FGeneral&viewid=8ce552a9%2D103a%2D4ed7%2Da184%2D63d638edf6fb&csf=1&web=1&e=4lmiLV&CID=1a246fa1%2Db0d9%2D7000%2D5f63%2D056ce0341142&cidOR=SPO&FolderCTID=0x01200028E8F16D80BAB3488EB3BCD3F78C8A4F&ovuser=aee6e3c9%2D711e%2D4c7c%2Dbd27%2D04f2307db20d%2Cjoel5174%40esri%2Ecom&OR=Teams%2DHL&CT=1748550337383&clickparams=eyJBcHBOYW1lIjoiVGVhbXMtRGVza3RvcCIsIkFwcFZlcnNpb24iOiI1MC8yNTA1MDQwMTYyMCJ9)
 
 
 ### GitHub
