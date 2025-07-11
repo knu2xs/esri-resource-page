@@ -16,6 +16,7 @@ nav:
   - GeoAnalytics Engine: geoanalytics.md
   - Add H3 to ArcGIS Pro: add_h3_pro.md
   - Azure Function Development on Mac: azure_function_setup.md
+  - Switching ArcGIS Feature Service View Source: arcgis_swap_view_source.md
 
 plugins:
   - search
