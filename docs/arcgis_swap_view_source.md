@@ -10,7 +10,7 @@ remove the existing reference to the Feature Service, and next, add the new.
 Using the layer index, remove the exiting layer from the Feature Layer View. After clicking on _Delete from Definition_. On the _Delete 
 From Service Definition_ page, remove and replace the JSON in the window with the following.
 
-``` json
+``` json hl_lines="4"
 {
   "layers": [
     {
@@ -25,7 +25,7 @@ From Service Definition_ page, remove and replace the JSON in the window with th
 After successfully removing the layer, next add the new one by going to _Add to Definition_. On the _Add to Service Definition_ page,
 replace the JSON with the following, replacing `centroids_20250611` with the name of the updated feature service name.
 
-``` json
+``` json hl_lines="6 16"
 {
   "layers": [
     {
