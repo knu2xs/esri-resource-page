@@ -55,7 +55,7 @@ get_idx(!SHAPE!)
 
 This succicnt function uses H3-Py to retrieve the H3 index from the latitude (y-coordinate) and longitude (x-coordinate) of each feature geometry at the desired resolution.
 
-```
+```python
 import h3
 
 h3_resolution = 7
