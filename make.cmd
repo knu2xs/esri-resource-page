@@ -38,8 +38,7 @@ GOTO %1
 
 :: Make documentation using mkdocs-material!
 :docs
-    CALL conda run -p ./env mkdocs build --site-dir ./docs
-    GOTO end
+    GOTO update
 
 :: Build the local environment from the environment file
 :env
