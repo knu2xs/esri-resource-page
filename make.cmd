@@ -38,7 +38,7 @@ GOTO %1
 
 :: Make documentation using mkdocs-material!
 :docs
-    CALL conda run -p %CONDA_DIR% sphinx-build -a -b html docsrc docs
+    CALL conda run -p ./env mkdocs build --site-dir ./docs
     GOTO end
 
 :: Build the local environment from the environment file
@@ -56,11 +56,11 @@ GOTO %1
 :: Update sitreps
 :update
     cd %PROJECT_DIR%
-	git add -A
-	git commit -m "update sitreps"
-	git pull
-	git push
-    conda run -p ./env mkdocs build --site-dir "%SystemDrive%\inetpub\wwwroot"
+	CALL git add -A
+	CALL git commit -m "update sitreps"
+	CALL git pull
+	CALL git push
+    CALL conda run -p ./env mkdocs build --site-dir "%SystemDrive%\inetpub\wwwroot"
     GOTO end
 
 :end
