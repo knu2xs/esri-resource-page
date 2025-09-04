@@ -9,4 +9,5 @@ dependencies:
   - pip:
     - build
     - bump2version
+    - mkdocs-jupyter
     - mkdocs-material

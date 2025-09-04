@@ -14,6 +14,7 @@ nav:
   - Situational Reports:
     - sitreps/index.md
   - GeoAnalytics Engine: geoanalytics.md
+  - Overlay with H3 and GeoAnalytics: notebooks/0.20-intersect-h3-geoanalytics.ipynb
   - Add H3 to ArcGIS Pro: add_h3_pro.md
   - Azure Function Development on Mac: azure_function_setup.md
   - Switching ArcGIS Feature Service View Source: arcgis_swap_view_source.md
@@ -25,6 +26,10 @@ plugins:
       post_date_format: dd MMM YYYY
       archive_date_format: MMM yyyy
       archive_url_date_format: yyyy/MM
+
+  # extension converting included notebooks into html at build time
+  - mkdocs-jupyter:
+      include_source: true
 
 markdown_extensions:
   - pymdownx.highlight:
