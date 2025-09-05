@@ -40,6 +40,11 @@ GOTO %1
 :docs
     GOTO update
 
+:: Easily start live server
+:serve
+    CALL conda run -p ./env mkdocs serve
+    GOTO end
+
 :: Build the local environment from the environment file
 :env
     :: Create new environment from environment file
