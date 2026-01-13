@@ -58,6 +58,8 @@ df_pnts = df_pnts.join(
 
 ### Geocoding
 
+- **TODO:** Document how to use StreetMap Premium internally
+
 - [geoanalytics.tools.Geocode](https://developers.arcgis.com/geoanalytics/api-reference/geoanalytics.tools.html#geocode)
 
 ```python hl_lines="17 18 19 20 21 22"

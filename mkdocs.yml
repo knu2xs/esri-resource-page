@@ -17,6 +17,10 @@ plugins:
       archive_date_format: MMM yyyy
       archive_url_date_format: yyyy/MM
 
+  # extension converting included notebooks into html at build time
+  - mkdocs-jupyter:
+      include_source: true
+
 markdown_extensions:
   - pymdownx.highlight:
       use_pygments: true
