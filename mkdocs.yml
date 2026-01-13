@@ -9,15 +9,6 @@ theme:
   features:
     - content.code.copy
 
-nav:
-  - Landing Page: index.md
-  - Situational Reports:
-    - sitreps/index.md
-  - GeoAnalytics Engine: geoanalytics.md
-  - Add H3 to ArcGIS Pro: add_h3_pro.md
-  - Azure Function Development on Mac: azure_function_setup.md
-  - Switching ArcGIS Feature Service View Source: arcgis_swap_view_source.md
-
 plugins:
   - search
   - blog:
@@ -30,6 +21,8 @@ markdown_extensions:
   - pymdownx.highlight:
       use_pygments: true
       pygments_lang_class: true
-      linenums: true
+      linenums: false
       anchor_linenums: true
+  - admonition
+  - pymdownx.details
   - pymdownx.superfences

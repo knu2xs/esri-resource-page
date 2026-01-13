@@ -19,7 +19,10 @@ clean:
 
 ## Build the docs
 docs:
-	conda run -p ./env mkdocs build
+	conda run -p ./env zensical build
+
+docserve:
+	conda run -p ./env zensical serve
 
 ## Build the local environment from the environment file
 env:

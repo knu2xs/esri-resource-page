@@ -9,4 +9,4 @@ dependencies:
   - pip:
     - build
     - bump2version
-    - mkdocs-material
+    - zensical

@@ -25,8 +25,7 @@
 
 SETLOCAL
 SET PROJECT_DIR=%cd%
-SET PROJECT_NAME=density-anomalies
-SET SUPPORT_LIBRARY = density_anomalies
+SET PROJECT_NAME=esri-resource-page
 SET CONDA_DIR="%~dp0env"
 
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -36,9 +35,9 @@ SET CONDA_DIR="%~dp0env"
 :: Jump to command
 GOTO %1
 
-:: Make documentation using mkdocs-material!
+:: Make documentation using zensical!
 :docs
-    CALL conda run -p %CONDA_DIR% sphinx-build -a -b html docsrc docs
+    CALL conda run -p %CONDA_DIR% zensical build
     GOTO end
 
 :: Build the local environment from the environment file
@@ -60,7 +59,7 @@ GOTO %1
 	git commit -m "update sitreps"
 	git pull
 	git push
-    conda run -p ./env mkdocs build --site-dir "%SystemDrive%\inetpub\wwwroot"
+    conda run -p ./env zensical build --site-dir "%SystemDrive%\inetpub\wwwroot"
     GOTO end
 
 :end
