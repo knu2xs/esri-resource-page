@@ -200,18 +200,3 @@ Reference: [Create an ArcGIS Notebook Server site](https://enterprise.arcgis.com
 !!! note "Opening the Wizard"
 
     If not open, access wizard from Start > ArcGIS > ArcGIS Notebook Server Configuration Wizard
-
-## Create a Custom Image
-
-References:
-
-- [Build a custom container image](https://enterprise.arcgis.com/en/notebook/latest/install/windows/extend-a-notebook-runtime.htm#ESRI_SECTION1_027D1A1826A242B3BEB7F9A0166DEEEF)
-- [ArcGIS Notebooks Python Libraries Manifest](https://www.esri.com/content/dam/esrisites/en-us/media/manuals/arcgis-notebook-runtime/python-library-13.0.pdf)
-
-### Get Python Package Manifest
-
-Reference: [Generate a manifest file for custom and/or extended runtimes](https://support.esri.com/en-us/knowledge-base/generate-manifest-file-for-custom-extended-runtimes-000025575) (Tech Support Article)
-
-``` powershell
-$ID = docker container run -d --rm -it -v /:/host <custom_runtime_image_ID>; docker exec -it $ID /opt/conda/bin/conda list --json >> ~\Desktop\manifest.json; docker kill $ID
-```
