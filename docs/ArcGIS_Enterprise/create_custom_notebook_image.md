@@ -12,6 +12,8 @@ From a administrator command prompt, use the following command to get the contai
 docker images
 ```
 
+![Docker Images command](../assets/docker_images.png)
+
 ### Create Dockerfile
 
 Create a custom `DOCKERFILE` following a similar template as below.
@@ -23,7 +25,7 @@ Create a custom `DOCKERFILE` following a similar template as below.
 ``` dockerfile
 # starting point for new notebook image, the base arcgis-notebook-python-windows image
 # this is discovered by typing `docker images` in an administrator command prompt
-FROM arcgis-notebook-python-windows:12.0.0.58905
+FROM arcgis-notebook-python-windows:11.3.0.51575
 
 # use run to install and clean to reduce image size - using geopandas installed from conda-forge as an example
 RUN conda install -c conda-forge geopandas \
@@ -39,7 +41,7 @@ Build the container image by running the following command from an administrator
     This step also installs the newly built image locally.
 
 ``` bat
-docker build -t <repository>:<tag> -f Dockerfile
+docker build .
 ```
 
 ### Get the Python Package Manifest
@@ -53,4 +55,5 @@ $ID = docker container run -d --rm -it -v /:/host <custom_runtime_image_ID>; doc
 ```
 
 ## Install the Image in Notebook Server
+
 

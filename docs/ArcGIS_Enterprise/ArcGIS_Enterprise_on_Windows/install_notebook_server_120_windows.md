@@ -185,7 +185,7 @@ docker ps -a
 ```
 
 Look for an entry in the response that indicates port mapping (e.g., `0.0.0.0:30001->8888/tcp`).
-- Test HTTP Response: Open Windows PowerShell as Administrator and run the following command.
+- Test HTTP Response: Open Windows PowerShell and run the following command.
 
 ``` powershell
 wget http://127.0.0.1:30001
