@@ -7,6 +7,8 @@
 
 ## Professional Services
 
+- [MyPS Hub](https://myps-prof-services.hub.arcgis.com)
+- [Esri Professional Services on ArcGIS Online](https://prof-services.maps.arcgis.com/home/index.html)
 - [Pacific Delivery Center on ArcGIS Online](https://ps-pdc.maps.arcgis.com/home/index.html)
 
 ## References
