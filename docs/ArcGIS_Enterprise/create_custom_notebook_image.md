@@ -219,8 +219,12 @@ If successful, the new runtime will now be in the list of available runtimes.
 
 ## Test the Notebook Runtime
 
-Now, it is time to test the newly installed runtime. Start by going to the ArcGIS Portal and selecting Notebooks from the top menu. In the Notebooks page, when clicking on New Notebook, you should have a new option available, Custom. Click on Custom to open the dialog to select a custom runtime.
+Now, it is time to test the newly installed runtime. Start by going to the ArcGIS Portal and selecting Notebooks from the top menu. In the Notebooks page, when clicking on New Notebook, you should have a new option available, Custom. Click on **Custom** to open the dialog to select a custom runtime.
 
 ![New Notebook Custom](../assets/new_notebook_custom.png)
 
-In the custom notebook dialog, you should now see the name for the newly installed runtime. Select the name of the new runtime in this dialog, and click Open. This will 
+In the custom notebook dialog, you should now see the name for the newly installed runtime. Select the name of the new runtime in this dialog, and click Open. This will open up a modal dialog to select a custom runtime.
+
+![Select Custom Runtime](../assets/select_custom_runtime.png)
+
+This _should_ open a new notebook you can start using with the added packages.
