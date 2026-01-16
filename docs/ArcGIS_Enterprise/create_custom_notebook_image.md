@@ -62,7 +62,7 @@ If the package is available, you can install the package using Conda.
 conda install <PACKAGE>
 ```
 
-If you are interestd in ensuring a specific version is installed, instead of simply the most current, you can specify the version using the following syntax.
+If you are interested in ensuring a specific version is installed, instead of simply the most current, you can specify the version using the following syntax.
 
 ```bat
 conda install <PACKAGE>=<VERSION>
