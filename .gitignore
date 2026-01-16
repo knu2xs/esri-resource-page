@@ -6,3 +6,6 @@ env
 
 # mkdocs built site
 site
+
+# any secret files
+**/*secret*.*

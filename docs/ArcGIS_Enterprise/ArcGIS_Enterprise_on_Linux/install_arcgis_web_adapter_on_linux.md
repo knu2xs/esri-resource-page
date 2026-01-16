@@ -125,6 +125,8 @@ sudo systemctl status tomcat
 
 References:
 
+- [Ubuntu Server Documentation: Firewall](https://documentation.ubuntu.com/server/how-to/security/firewalls/)
+- [Ubuntu Manuals: UFW8](https://manpages.ubuntu.com/manpages/focal/man8/ufw.8.html)
 - [Ubuntu How-To: Firewalls](https://documentation.ubuntu.com/server/how-to/security/firewalls/)
 - [Ubuntu Wiki: Uncomplicated Firewall](https://wiki.ubuntu.com/UncomplicatedFirewall)
 
