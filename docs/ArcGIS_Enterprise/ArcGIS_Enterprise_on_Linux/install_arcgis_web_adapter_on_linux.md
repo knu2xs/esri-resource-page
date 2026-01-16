@@ -3,7 +3,7 @@
 References:
 
 - [System Requirements](https://enterprise.arcgis.com/en/web-adaptor/latest/install/java-linux/arcgis-web-adaptor-system-requirements.htm)
-- 
+- [Medium: Installing Apache Tomcat on Ubuntu 22.04](https://medium.com/@madhavarajas1997/installing-apache-tomcat-on-ubuntu-22-04-08c8eda52312)
 
 ## Install and Configure System Requrements
 
@@ -137,4 +137,96 @@ sudo ufw allow 8080/tcp
 sudo ufw enable # if firewall is not already enabled
 ```
 
-You can now access the default Tomcat web interface by navigating to `http://<your_server_IP_address>:8080` in your web browser.
+You can now access the default Tomcat web interface by navigating to `http://<your_server>:8080` in your web browser.
+
+![Tomcat Landing Page](../assets/tomcat_landing_page.png)
+
+#### Install Server Certificates
+
+??? note "Esri Internal Certificates"
+
+    For machines on the Esri internal network, you can get certificates for your machine name (`servername.esri.com`) and the domain (`esri.com`) root certificate from [https://certifactory.esri.com/certs/](https://certifactory.esri.com/certs/). If on a terminal linux machine (likely), you can [get the certificate through a REST request](https://certifactory.esri.com/api/), which is even easier, because then you have the certificate right on the machine.
+
+    The GET request structure for this is the following:
+
+        - Single PFX: `https://certifactory.esri.com/api/servername.pfx?password=P@$$w0rd`
+        - CA (domain) Certificate: `https://certifactory.esri.com/api/caroot.crt`
+
+To install a PFX server certificate on Ubuntu for Tomcat, you need to upload the PFX file to the server and then configure Tomcat's  file to point to the certificate file and specify the  keystore type. [1, 2]  
+
+##### Upload the PFX Certificate to the Ubuntu Server 
+
+1. Log in to your Ubuntu server via SSH. 
+2. Navigate to a secure directory within your Tomcat installation, for example, the  directory, or create a new  folder.
+
+``` bash
+cd /opt/tomcat # (or wherever your Tomcat is installed)
+mkdir cert
+cd cert
+```
+
+3. Use a secure file transfer protocol (SCP or SFTP) client (like WinSCP, or the  command line tool) to upload your PFX file and the associated password file (, if provided by your CA) from your local machine to the server directory. [1]  
+
+##### Configure the Tomcat  File 
+
+1. Locate the `server.xml` configuration file, which is typically in the `conf` directory of your Tomcat installation (e.g., `opt/tomcat/conf/server.xml`). 
+2. Open the file for editing using a text editor like `nano`.
+
+``` bash
+nano /opt/tomcat/conf/server.xml
+```
+
+3. Find the existing SSL/TLS  entry (usually commented out and configured for port 8443 or 443). Uncomment it if necessary. 
+4. Modify the connector attributes to use your PFX file and specify the  keystore type. Ensure the  attribute points to the correct path of your PFX file and  is the correct password. 
+
+``` xml
+<Connector 
+    protocol="org.apache.coyote.http11.Http11NioProtocol"
+    port="443" 
+    maxThreads="200"
+    scheme="https" 
+    secure="true" 
+    SSLEnabled="true"
+    keystoreFile="/opt/tomcat/cert/your_certificate.pfx"
+    keystorePass="your_pfx_password"
+    keystoreType="PKCS12"
+    clientAuth="false" 
+    sslProtocol="TLS"
+/>
+```
+
+5. Example configuration: 
+
+	• `port`: Change from 8443 to 443 for standard HTTPS traffic (requires root privileges or appropriate system configuration). 
+	• `keystoreFile`: The absolute path to your PFX file. 
+	• `keystorePass`: The password for your PFX file (found in the  file or the one you set during creation). 
+	• `keystoreType`: MUST be set to . 
+
+6. Save the changes to  and exit the editor. [1, 2, 3, 4, 5]  
+
+##### Restart Tomcat 
+
+1. Navigate to the  directory of your Tomcat installation. 
+2. Shut down the Tomcat service. 
+3. Start the Tomcat service again to apply the changes. [1, 6, 7, 8]  
+
+##### Verify the Installation 
+
+Open a web browser and access your website using `https://server.domain.com` (port 443 is used by default if accessing via https). You should see the site load securely with your new SSL certificate. [9, 10, 11, 12]
+
+[1] https://docs.byteplus.com/en/docs/byteplus-certificate-center/docs-install-pfx-certificate-on-tomcat
+[2] https://stackoverflow.com/questions/23271327/installing-updated-pfx-wildcard-into-tomcat-keystore
+[3] https://docs.byteplus.com/zh-CN/docs/byteplus-certificate-center/docs-install-pfx-certificate-on-tomcat
+[4] https://docs.rclapp.com/installations/apache-tomcat.html
+[5] https://knowledge.digicert.com/tutorials/tomcat-create-csr-install-ssl-tls-certificate
+[6] https://docs.byteplus.com/en/docs/byteplus-certificate-center/docs-install-jks-certificate-on-tomcat
+[7] https://support.huawei.com/enterprise/en/doc/EDOC1100467681/814bc119/installing-an-ssl-certificate
+[8] https://medium.com/@imageadhikari/static-site-hosting-with-tomcat-a-step-by-step-guide-463d24d7b55e
+[9] https://www.tencentcloud.com/document/product/1007/30956
+[10] https://certpanel.com/resources/how-to-install-an-ssl-certificate-on-nginx-ubuntu-manually-or-automatically/
+[11] https://docs.safe.com/fme/2021.1/html/FME_Server_Documentation/AdminGuide/configuring_for_https.htm
+[12] https://upcloud.com/resources/tutorials/install-lets-encrypt-nginx/
+
+#### Allow Remote Access
+
+If accessing the Tomcat web interface from another machine, which is the _only_ way to access it if you are installing on an instance without a graphical user interface, you first need to enable access from a machine other than `localhost`. This is accomplished by editing the `context.xml` file. If installed according to the instructions above, this is located in 
