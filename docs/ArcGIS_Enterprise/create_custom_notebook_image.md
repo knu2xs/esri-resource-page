@@ -10,10 +10,6 @@ Installing additional packages has the potential to break dependencies. I have e
 
     The channels used by the Notebook Server are `esri` and `defaults` in that order. Although you can install packages from `conda-forge`, this has a high probablity of breaking the environment, especially if the package you are installing has something in the dependency chain affecting one of the Jupyter packages.
 
-- launch container in interactive mode
-- install additional packages
-- test running jupyter notebook
-
 ### Launch Container in Interactive Mode
 
 Begin by launching a container using the image downloaded and installed from Esri. This requires first getting the image ID, and then launching this container in interactive mode.
