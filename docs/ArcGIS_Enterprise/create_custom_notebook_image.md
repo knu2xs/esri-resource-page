@@ -23,7 +23,7 @@ docker images
 Using the image ID collected above, use this image id to launch a Docker container using this image for testing.
 
 ``` bat
-docker run -ip -p 30001:8888 <IMAGE_ID>
+docker run -ip -p 8888:8888 <IMAGE_ID>
 ```
 
 ![Docker Run Interactive](../assets/docker_run_interactive.png)
@@ -92,7 +92,7 @@ After installing the packages you are interested in, see if Jupyter Notebook lau
 jupyter notebook
 ```
 
-However, if you want to see if you can access the image from the host operating system, the following maps local port 8888 to the notebook. This makes it easy to use the hyperlink output to the console to test reaching the notebook from a browser.
+However, if you want to see if you can access the image from the host operating system. This makes it easy to use the hyperlink output to the console to test reaching the notebook from a browser to test if it is possible to access Jupyter from the hosting operating system.
 
 ``` bat
 jupyter notebook --NotebookApp.ip=0.0.0.0
