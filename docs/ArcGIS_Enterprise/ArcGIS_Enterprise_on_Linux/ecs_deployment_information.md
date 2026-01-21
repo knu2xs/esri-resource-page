@@ -18,15 +18,15 @@ PS029504.esri.com
 - Portal: <https://ps029504.esri.com/portal>
 - Portal Admin: <https://ps029504.esri.com/portal/portaladmin>
 
-### Server:
+### Server
 
 ```
 ps029505.esri.com
 ```
 
-- ArcGIS Server: <https://ps029505.esri.com:6443/arcgis>
+- ArcGIS Server (Web Adaptor): <https://ps029504.esri.com/server>
+- ArcGIS Server Manager: <https://ps029505.esri.com:6443/arcgis/manager>
 - ArcGIS Server Admin: <https://ps029505.esri.com:6443/arcgis/admin>
-- ArcGIS Server Services (Web Adaptor): <https://ps029504.esri.com/server/rest/services>
 
 ### Data Store
 

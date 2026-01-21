@@ -2,8 +2,8 @@
 
 References: 
 
-    - [System Requirements](https://enterprise.arcgis.com/en/web-adaptor/latest/install/java-linux/arcgis-web-adaptor-system-requirements.htm)
-    - [Install ArcGIS Portal on Linux](https://enterprise.arcgis.com/en/web-adaptor/latest/install/java-linux/welcome-arcgis-web-adaptor-install-guide.htm)
+- [System Requirements](https://enterprise.arcgis.com/en/web-adaptor/latest/install/java-linux/arcgis-web-adaptor-system-requirements.htm)
+- [Install ArcGIS Portal on Linux](https://enterprise.arcgis.com/en/web-adaptor/latest/install/java-linux/welcome-arcgis-web-adaptor-install-guide.htm)
 
 ## Set File Handle Limits
 
@@ -63,7 +63,7 @@ First, check the available space on the `/opt` volume.
 df -h /opt
 ```
 
-There needs to be at least 20 GB of free space to install Portal for ArcGIS. If there is not enough space, extend the logical volume.
+There needs to be at least 20 GB of free space to install Portal for ArcGIS. If there is not enough space, extend the logical volume. When installing, I discovered only 20GB is allocated by default, so I extended it by an additional 10GB to have enough capacity.
 
 ``` bash
 sudo lvextend -L +10G /dev/vg_os/lv_opt --resizefs
@@ -73,7 +73,7 @@ sudo lvextend -L +10G /dev/vg_os/lv_opt --resizefs
 
 Now, run the Portal for ArcGIS installer as the `arcgis` user.
 
-!!! warning
+!!! "Install as `arcgis`"
 
     If not the `arcgis` user, use `sudo su - arcgis` to switch to the `arcgis` user before running the installer.
 
@@ -117,6 +117,10 @@ sudo systemctl status arcgisportal.service
 
 This has to be done through the Portal for ArcGIS web interface. Open a web browser and navigate to `https://<portal_hostname>:7443/portal/webadaptor`. Follow the prompts to create the initial site, specifying the data directory created in the previous step, making the content directory `/var/opt/arcgis/portal/content`, and setting the initial administrator account.
 
+``` bash
+/var/opt/arcgis/portal/content
+```
+
 ## Configure Portal for ArcGIS Web Adaptor
 
 Web Adapter configuration must be done on the web server where the web adaptor is installed. The following steps shall be performed on the web server where the ArcGIS Web Adaptor is installed.
@@ -132,6 +136,7 @@ Restart the Tomcat service to deploy the web adaptor.
 
 ``` bash
 sudo systemctl restart tomcat
+sudo systemctl status tomcat --no-pager
 ```
 
 Since there is no GUI on the Linux server, use the command line interface to configure the web adaptor. Run the following command, replacing the placeholders with your actual values.
