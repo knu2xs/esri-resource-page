@@ -24,16 +24,22 @@ Verify the Java installation.
 java -version
 ```
 
-### Tomcat Server
-
-#### Create Tomcat User
+### Create Tomcat User
 
 For security best practices, create a non-root user (`tomcat`) and group (`tomcat`) to run the Tomcat service. 
 
 ``` bash
 sudo groupadd tomcat
-sudo useradd -s /bin/false -g tomcat -d /opt/tomcat tomcat
+sudo useradd -g tomcat -d /opt/tomcat tomcat
 ```
+
+!!! note
+
+    It is a best practice to configure the `tomcat` user without login capabilities for security reasons, but for ease of use, we will allow login in this guide. If truly following best practices, use the following command instead to create the `tomcat` user without login capabilities:
+
+    ``` bash
+    sudo useradd -s /bin/false -g tomcat -d /opt/tomcat tomcat
+    ```
 
 Also, although optional, it is useful to set a user password and default shell (`bash`) as well. This enables remote login as the `tomcat` user if needed for troubleshooting or maintenance, and allows you to access the Tomcat installation directory from a remote VS Code session over SSH. This makes editing the configuration files much easier.
 
@@ -58,6 +64,19 @@ sudo chown tomcat:tomcat /opt/tomcat/.bashrc
     ```
 
     You can verify this by using the `whoami` command to ensure you are now working as the `tomcat` user.
+
+### Authbind
+
+To allow Tomcat to bind to ports below 1024 (like 80 and 443) without running as root, install and configure `authbind`.
+
+``` bash
+sudo apt install authbind -y
+sudo touch /etc/authbind/byport/443
+sudo chown tomcat:tomcat /etc/authbind/byport/443
+sudo chmod 500 /etc/authbind/byport/443
+```
+
+### Tomcat Server
 
 #### Download Apache Tomcat 10.1
 
@@ -88,25 +107,11 @@ sudo tar xvf apache-tomcat-*.tar.gz -C /opt/tomcat --strip-components=1
 
 Change the owner and group of the entire `/opt/tomcat/` directory (and contents) to the `tomcat` user and `tomcat` group. This ensures the Tomcat service has proper permissions to read and write files within the installation directory.
 
-**Parameters:**
-
-- `chown` - Change file owner and group
-- `-R`: Recursively apply the ownership change to all files and subdirectories
-- `tomcat:tomcat`: Sets both user owner and group owner to `tomcat`
-- `/opt/tomcat/`: Target directory (standard Tomcat installation location on Linux)
-
 ``` bash
 sudo chown -R tomcat:tomcat /opt/tomcat/
 ```
 
 Next, set the appropriate permissions for the Tomcat binary files for the owner (user) on all files and directories recursively within `/opt/tomcat/bin`. This allows the Tomcat startup scripts to be executable by the owner user account (`tomcat`).
-
-**Parameters:**
-
-- `chmod` - Change file mode bits (permissions)
-- `-R` - Apply changes recursively to all files and subdirectories
-- `u+x` - Add execute permission (+x) for the owner user (u)
-- `/opt/tomcat/bin` - Target directory containing Tomcat binary executables
 
 ``` bash
 sudo chmod -R u+x /opt/tomcat/bin
@@ -199,19 +204,6 @@ You can now access the default Tomcat web interface by navigating to `http://<yo
 
 ![Tomcat Landing Page](../../assets/tomcat_landing_page.png)
 
-#### Enable Access to Port 443 (HTTPS)
-
-Port 443 is the standard port for HTTPS traffic. If you plan to configure SSL/TLS for secure connections to your Tomcat server, you need to allow traffic on this port. Although we opened port 443 above, Linux blocks network traffic on ports below 1024 for non-root users by default. To allow Tomcat (running as the `tomcat` user) to bind to port 443, you can use `authbind` to grant permission.
-
-The follwowing commands install `authbind`, create the necessary configuration file for port 443, and set the appropriate ownership and permissions so that the `tomcat` user can bind to this port.
-
-``` bash
-sudo apt install authbind
-sudo touch /etc/authbind/byport/443
-sudo chown tomcat:tomcat /etc/authbind/byport/443
-sudo chmod 500 /etc/authbind/byport/443
-```
-
 #### Install Server Certificates
 
 To install a PFX server certificate on Ubuntu for Tomcat, you need to upload the PFX file to the server and then configure Tomcat's file to point to the certificate file and specify the  keystore type. \[[1], [2]\]  
@@ -291,10 +283,10 @@ To install a PFX server certificate on Ubuntu for Tomcat, you need to upload the
 
 
 1. Log in to your Ubuntu server via SSH. 
-2. Navigate to a secure directory within your Tomcat installation, for example, the  directory, or create a new  folder.
+2. Navigate to a secure directory within your Tomcat installation, or create one specifically for storing certificates. For example, you can create a `cert` directory under the Tomcat installation directory.
 
     ``` bash
-    cd /opt/tomcat # (or wherever your Tomcat is installed)
+    cd /opt/tomcat
     mkdir cert
     cd cert
     ```
@@ -390,5 +382,3 @@ Now, you can access the Tomcat Manager and Host Manager applications by navigati
 - Host Manager App: `https://<your_server>/host-manager/html`
 
 When prompted, enter the administrator username and password you configured in the `tomcat-users.xml` file, and you should now have access to the Tomcat web interface over HTTPS.
-
-
