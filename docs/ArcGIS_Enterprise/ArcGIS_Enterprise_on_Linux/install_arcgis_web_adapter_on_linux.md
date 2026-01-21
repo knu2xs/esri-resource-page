@@ -414,9 +414,11 @@ Run the setup script as the `arcgis` user.
     sudo chown arcgis:arcgis /opt/arcgis/.bashrc
     ```
 
-Switch to the `arcgis` user and run the Web Adapter setup script in silent mode. Using the `-v` (verbose) flag provides detailed output during the installation process, so you 
+Switch to the `arcgis` user and run the Web Adapter setup script in silent mode. Using the `-v` (verbose) flag provides detailed output during the installation process, so you can monitor the installation progress.
 
 ``` bash
 sudo su - arcgis -s
 /tmp/WebAdapter/Setup -m silent -l yes -d /opt/arcgis/webadaptor -v
 ```
+
+Once installed, the web adapter can be configured to support specific ArcGIS Enterprise components (Portal for ArcGIS and ArcGIS Server) following installation and initial setup of the respective components.

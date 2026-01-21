@@ -114,9 +114,9 @@ This has to be done through the Portal for ArcGIS web interface. Open a web brow
 
 ## Configure Portal for ArcGIS Web Adaptor
 
-On the machine, use the web adapter setup utility to configure the web adaptor to work with Portal for ArcGIS.
+Web Adapter configuration must be done on the web server where the web adaptor is installed. The following steps shall be performed on the web server where the ArcGIS Web Adaptor is installed.
 
-Move the `arcgis.war` file to the Tomcat webapps directory, and rename it to `portal.war`.
+Move the `arcgis.war` file to the Tomcat webapps directory, and rename it to `portal.war`. When Tomcat restarts, it will deploy the web adaptor for Portal for ArcGIS as `https://<webserver.domain.com>/portal`.
 
 ``` bash
 sudo mv /opt/tomcat/webapps/arcgis.war /opt/tomcat/webapps/portal.war
@@ -129,8 +129,12 @@ Restart the Tomcat service to deploy the web adaptor.
 sudo systemctl restart tomcat
 ```
 
-On the machine with the web adapter use the web adapter setup utility to configure the web adaptor to work with Portal for ArcGIS.
+Since there is no GUI on the Linux server, use the command line interface to configure the web adaptor. Run the following command, replacing the placeholders with your actual values.
 
 ``` bash
 /opt/arcgis/webadaptor12.0/java/tools/configurewebadaptor.sh -m portal -w https://<webserver.domain.com>/portal/webadaptor -g portalserver.domain.com -u portaladmin -p P@ssw0rd
 ```
+
+## Verify the Installation
+
+Now, you are ready to access the Portal for ArcGIS site. Open a web browser and navigate to `https://<webserver.domain.com>/portal`. Log in using the administrator account you created earlier to verify that the installation was successful.
