@@ -28,12 +28,36 @@ java -version
 
 #### Create Tomcat User
 
-For security best practices, create a non-root user and group to run the Tomcat service. 
+For security best practices, create a non-root user (`tomcat`) and group (`tomcat`) to run the Tomcat service. 
 
 ``` bash
 sudo groupadd tomcat
 sudo useradd -s /bin/false -g tomcat -d /opt/tomcat tomcat
 ```
+
+Also, although optional, it is useful to set a user password and default shell (`bash`) as well. This enables remote login as the `tomcat` user if needed for troubleshooting or maintenance, and allows you to access the Tomcat installation directory from a remote VS Code session over SSH. This makes editing the configuration files much easier.
+
+``` bash
+sudo passwd tomcat
+sudo usermod -s /bin/bash tomcat
+```
+
+Finally, if you want the same behavior (mostly bash coloring) as the current user (`linux` on Esri ECS instance), copy the current user's bash profile to the `tomcat` user.
+
+``` bash
+sudo cp ~/.bashrc /opt/tomcat/
+sudo chown tomcat:tomcat /opt/tomcat/.bashrc
+```
+
+!!! note "Run as Tomcat User"
+
+    You can switch to the `tomcat` user at any time using the following command:
+
+    ``` bash
+    sudo -u tomcat -s
+    ```
+
+    You can verify this by using the `whoami` command to ensure you are now working as the `tomcat` user.
 
 #### Download Apache Tomcat 10.1
 
@@ -57,57 +81,82 @@ wget dlcdn.apache.org
 
 ``` bash
 sudo mkdir /opt/tomcat
-sudo tar xvf apache-tomcat-10.1.37.tar.gz -C /opt/tomcat --strip-components=1
+sudo tar xvf apache-tomcat-*.tar.gz -C /opt/tomcat --strip-components=1
 ```
 
 #### Configure Permissions
 
-Grant the newly created tomcat user ownership of the installation directory so it can access the files. 
+Change the owner and group of the entire `/opt/tomcat/` directory (and contents) to the `tomcat` user and `tomcat` group. This ensures the Tomcat service has proper permissions to read and write files within the installation directory.
+
+**Parameters:**
+
+- `chown` - Change file owner and group
+- `-R`: Recursively apply the ownership change to all files and subdirectories
+- `tomcat:tomcat`: Sets both user owner and group owner to `tomcat`
+- `/opt/tomcat/`: Target directory (standard Tomcat installation location on Linux)
 
 ``` bash
 sudo chown -R tomcat:tomcat /opt/tomcat/
+```
+
+Next, set the appropriate permissions for the Tomcat binary files for the owner (user) on all files and directories recursively within `/opt/tomcat/bin`. This allows the Tomcat startup scripts to be executable by the owner user account (`tomcat`).
+
+**Parameters:**
+
+- `chmod` - Change file mode bits (permissions)
+- `-R` - Apply changes recursively to all files and subdirectories
+- `u+x` - Add execute permission (+x) for the owner user (u)
+- `/opt/tomcat/bin` - Target directory containing Tomcat binary executables
+
+``` bash
 sudo chmod -R u+x /opt/tomcat/bin
 ```
 
-#### Create systemd Service File
+#### Create `systemd` Service File
 
 To run Tomcat as a service that can be started and stopped easily, create a systemd unit file.
 
 1. Create the service file using a text editor (like `nano`)
 
-``` bash
-sudo nano /etc/systemd/system/tomcat.service
-```
+    ``` bash
+    sudo nano /etc/systemd/system/tomcat.service
+    ```
 
 2. Populate the configuration file with the following.
 
-``` ini
-[Unit]
-Description="Apache Tomcat Web Application Server"
-After=network.target
+    ``` ini
+    [Unit]
+    Description="Apache Tomcat Web Application Server"
+    After=network.target
 
-[Service]
-Type=forking
+    [Service]
+    Type=forking
 
-User=tomcat
-Group=tomcat
+    User=tomcat
+    Group=tomcat
 
-Environment="JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64"
-Environment="CATALINA_PID=/opt/tomcat/temp/tomcat.pid"
-Environment="CATALINA_HOME=/opt/tomcat"
-ExecStart=/opt/tomcat/bin/startup.sh
-ExecStop=/opt/tomcat/bin/shutdown.sh
+    Environment="JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64"
+    Environment="CATALINA_PID=/opt/tomcat/temp/tomcat.pid"
+    Environment="CATALINA_HOME=/opt/tomcat"
 
-RestartSec=10
-Restart=always
+    # Startup using authbind so can use port 443
+    ExecStart=/usr/bin/authbind --deep /opt/tomcat/bin/startup.sh
+    ExecStop=/opt/tomcat/bin/shutdown.sh
 
-[Install]
-WantedBy=multi-user.target
-```
+    RestartSec=10
+    Restart=always
+
+    [Install]
+    WantedBy=multi-user.target
+    ```
 
 #### Start and Enable the Tomcat Service
 
 Reload systemd to recognize the new service and start Tomcat.
+
+!!! note
+
+    If you are working as the `tomcat` user, you may have to go back to a user with `sudo` privelages. You can drop out of of the `tomcat` session by simply using the command `exit`.
 
 ``` bash
 sudo systemctl daemon-reload
@@ -133,100 +182,213 @@ References:
 If you are running a firewall (UFW is common on Ubuntu), allow traffic on port 8080, which is the default Tomcat port.
 
 ``` bash
-sudo ufw allow 8080/tcp
+sudo ufw allow 8080
+sudo ufw allow 443
 sudo ufw enable # if firewall is not already enabled
 ```
 
+!!! note "Checking UFW Status"
+
+    You can check the status of UFW and see the allowed ports by running:
+
+    ``` bash
+    sudo ufw status
+    ```
+
 You can now access the default Tomcat web interface by navigating to `http://<your_server>:8080` in your web browser.
 
-![Tomcat Landing Page](../assets/tomcat_landing_page.png)
+![Tomcat Landing Page](../../assets/tomcat_landing_page.png)
+
+#### Enable Access to Port 443 (HTTPS)
+
+Port 443 is the standard port for HTTPS traffic. If you plan to configure SSL/TLS for secure connections to your Tomcat server, you need to allow traffic on this port. Although we opened port 443 above, Linux blocks network traffic on ports below 1024 for non-root users by default. To allow Tomcat (running as the `tomcat` user) to bind to port 443, you can use `authbind` to grant permission.
+
+The follwowing commands install `authbind`, create the necessary configuration file for port 443, and set the appropriate ownership and permissions so that the `tomcat` user can bind to this port.
+
+``` bash
+sudo apt install authbind
+sudo touch /etc/authbind/byport/443
+sudo chown tomcat:tomcat /etc/authbind/byport/443
+sudo chmod 500 /etc/authbind/byport/443
+```
 
 #### Install Server Certificates
+
+To install a PFX server certificate on Ubuntu for Tomcat, you need to upload the PFX file to the server and then configure Tomcat's file to point to the certificate file and specify the  keystore type. \[[1], [2]\]  
+
+##### Upload the PFX Certificate to the Ubuntu Server
 
 ??? note "Esri Internal Certificates"
 
     For machines on the Esri internal network, you can get certificates for your machine name (`servername.esri.com`) and the domain (`esri.com`) root certificate from [https://certifactory.esri.com/certs/](https://certifactory.esri.com/certs/). If on a terminal linux machine (likely), you can [get the certificate through a REST request](https://certifactory.esri.com/api/), which is even easier, because then you have the certificate right on the machine.
 
-    The GET request structure for this is the following:
+    Before getting the certificates, it is a lot easier to tell the current machine to trust the Esri internal PKI. You can do this by downloading and installing the Esri Root CA certificate.
 
-        - Single PFX: `https://certifactory.esri.com/api/servername.pfx?password=P@$$w0rd`
-        - CA (domain) Certificate: `https://certifactory.esri.com/api/caroot.crt`
+    ``` bash
+    sudo curl -L http://certifactory.esri.com/certs/esriroot.crt --output /usr/local/share/ca-certificates/esri_root_ca.crt
+    sudo curl -L http://certifactory.esri.com/certs/caroot.crt --output /usr/local/share/ca-certificates/esri_issuing_ca.crt
+    sudo update-ca-certificates
+    ```
 
-To install a PFX server certificate on Ubuntu for Tomcat, you need to upload the PFX file to the server and then configure Tomcat's  file to point to the certificate file and specify the  keystore type. [1, 2]  
+    Now, you can download the required certificates.
 
-##### Upload the PFX Certificate to the Ubuntu Server 
+    - Server PFX
+    
+    ``` bash
+    curl -o server.pfx https://certifactory.esri.com/api/servername.pfx?password=P@$$w0rd
+    ```
+
+    - Intermediate Certificate
+    
+    ``` bash
+    curl -o esri_intermediate.crt http://esri_pki.esri.com/crl/Esri%20Issuing%20CA.crt
+    ```
+
+    - CA (domain) Certificate
+    
+    ``` bash
+    curl -o caroot.crt https://certifactory.esri.com/api/caroot.crt
+    ```
+
+    Now, these need to be combined into a single PFX file.
+
+    1. Extract server certificate and private key from the PFX:
+    
+        ``` bash
+        openssl pkcs12 -in server.pfx -clcerts -nokeys -out server.crt
+        openssl pkcs12 -in server.pfx -nocerts -nodes  -out server.key
+        ```
+    2. Normalize the intermediate and root certificates:
+    
+        ``` bash
+        openssl x509 -inform DER -in esri_intermediate.crt -out esri_intermediate.pem 2>/dev/null \
+        || cp esri_intermediate.crt esri_intermediate.pem
+
+
+        openssl x509 -inform DER -in caroot.crt -out esri_root.pem 2>/dev/null \
+        || cp caroot.crt esri_root.pem
+        ```
+
+    3. Build the Full Chain Bundle:
+    
+        ``` bash
+        cat server.crt esri_intermediate.pem esri_root.pem > fullchain.crt
+        ```
+
+    4. Create the new PFX file:
+    
+        ``` bash
+        openssl pkcs12 -export \
+            -inkey server.key \
+            -in server.crt \
+            -certfile esri_intermediate.pem \
+            -certfile esri_root.pem \
+            -name tomcat \
+            -out tomcat_fullchain.p12
+        ```
+
+    This creates a proper full-chain PFX file named `tomcat_fullchain.p12` that can be used directly in Tomcat.
+
 
 1. Log in to your Ubuntu server via SSH. 
 2. Navigate to a secure directory within your Tomcat installation, for example, the  directory, or create a new  folder.
 
+    ``` bash
+    cd /opt/tomcat # (or wherever your Tomcat is installed)
+    mkdir cert
+    cd cert
+    ```
+
+3. Use a secure file transfer protocol (SCP or SFTP) client (like WinSCP, or the  command line tool) to upload your PFX file and the associated password file (`keystorePass.txt`, if provided by your CA) from your local machine to the server directory. \[[1]\]
+
+4. If you are doing this as another user other than `tomcat`, change the ownership of the `cert` directory using the following command.
+
+    ``` bash
+    sudo chown -R tomcat:tomcat /opt/tomcat/cert
+    ```
+
+5. Set permissions for `cert` directory.
+
+    ``` bash
+    sudo chmod -R 750 /opt/tomcat/cert
+    ```
+
+##### Configure Tomcat for SSL/TLS with the PFX Certificate
+
+Open the Tomcat `server.xml` configuration file in a text editor.
+
 ``` bash
-cd /opt/tomcat # (or wherever your Tomcat is installed)
-mkdir cert
-cd cert
+sudo nano /opt/tomcat/conf/server.xml
 ```
 
-3. Use a secure file transfer protocol (SCP or SFTP) client (like WinSCP, or the  command line tool) to upload your PFX file and the associated password file (, if provided by your CA) from your local machine to the server directory. [1]  
-
-##### Configure the Tomcat  File 
-
-1. Locate the `server.xml` configuration file, which is typically in the `conf` directory of your Tomcat installation (e.g., `opt/tomcat/conf/server.xml`). 
-2. Open the file for editing using a text editor like `nano`.
-
-``` bash
-nano /opt/tomcat/conf/server.xml
-```
-
-3. Find the existing SSL/TLS  entry (usually commented out and configured for port 8443 or 443). Uncomment it if necessary. 
-4. Modify the connector attributes to use your PFX file and specify the  keystore type. Ensure the  attribute points to the correct path of your PFX file and  is the correct password. 
+Locate the existing `<Connector>` element for port 8443 (commented out by default) and modify it to use port 443 and the PFX keystore. Replace the existing `<Connector>` element with the following configuration, making sure to update the `certificateKeystorePassword` attribute with the actual password for your PFX file.
 
 ``` xml
-<Connector 
-    protocol="org.apache.coyote.http11.Http11NioProtocol"
-    port="443" 
-    maxThreads="200"
-    scheme="https" 
-    secure="true" 
-    SSLEnabled="true"
-    keystoreFile="/opt/tomcat/cert/your_certificate.pfx"
-    keystorePass="your_pfx_password"
-    keystoreType="PKCS12"
-    clientAuth="false" 
-    sslProtocol="TLS"
-/>
+     <Connector port="443"
+               protocol="org.apache.coyote.http11.Http11NioProtocol"
+               address="0.0.0.0"
+               maxThreads="300"
+               scheme="https"
+               secure="true"
+               SSLEnabled="true">
+
+     <SSLHostConfig protocols="TLSv1.2,TLSv1.3"
+                    honorCipherOrder="true">
+
+          <Certificate
+               certificateKeystoreFile="cert/tomcat_fullchain.p12"
+               certificateKeystoreType="PKCS12"
+               certificateKeystorePassword="P@$$w0rd"
+          />
+
+     </SSLHostConfig>
+     </Connector>
 ```
 
-5. Example configuration: 
+#### Enable Remote Access
 
-	• `port`: Change from 8443 to 443 for standard HTTPS traffic (requires root privileges or appropriate system configuration). 
-	• `keystoreFile`: The absolute path to your PFX file. 
-	• `keystorePass`: The password for your PFX file (found in the  file or the one you set during creation). 
-	• `keystoreType`: MUST be set to . 
+If accessing the Tomcat web interface from another machine, which is the _only_ way to access it if you are installing on an instance without a graphical user interface, you first need to enable access from a machine other than `localhost` for the docs and admin pages.
 
-6. Save the changes to  and exit the editor. [1, 2, 3, 4, 5]  
+In the Tomcat root directory, (`/opt/tomcat/`), installed applications are directories under the `webapps` folder. To enable access to the default installed applications in the directoriese `docs`, `manager` and `host-manager`, locate the configuration files for these applications in the `META-INF` subdirectory of each application. Within each of the `META-INF` directories, there is a `context.xml` file that contains a `<Valve>` element restricting access to `localhost` by default. To allow access from other machines, comment out the `<Valve>` element in both `context.xml` files.
 
-##### Restart Tomcat 
+``` xml
+<Valve className="org.apache.catalina.valves.RemoteAddrValve"
+       allow="127\.\d+\.\d+\.\d+|::1|0:1"/>
+```
 
-1. Navigate to the  directory of your Tomcat installation. 
-2. Shut down the Tomcat service. 
-3. Start the Tomcat service again to apply the changes. [1, 6, 7, 8]  
+Enclose this line in comment tags, like so:
 
-##### Verify the Installation 
+``` xml
+<!--
+<Valve className="org.apache.catalina.valves.RemoteAddrValve"
+       allow="127\.\d+\.\d+\.\d+|::1|0:1"/>
+-->
+```
 
-Open a web browser and access your website using `https://server.domain.com` (port 443 is used by default if accessing via https). You should see the site load securely with your new SSL certificate. [9, 10, 11, 12]
+Next, you need to set administrator username and password to access these applications. Open the `tomcat-users.xml` file in the `conf` directory.
 
-[1] https://docs.byteplus.com/en/docs/byteplus-certificate-center/docs-install-pfx-certificate-on-tomcat
-[2] https://stackoverflow.com/questions/23271327/installing-updated-pfx-wildcard-into-tomcat-keystore
-[3] https://docs.byteplus.com/zh-CN/docs/byteplus-certificate-center/docs-install-pfx-certificate-on-tomcat
-[4] https://docs.rclapp.com/installations/apache-tomcat.html
-[5] https://knowledge.digicert.com/tutorials/tomcat-create-csr-install-ssl-tls-certificate
-[6] https://docs.byteplus.com/en/docs/byteplus-certificate-center/docs-install-jks-certificate-on-tomcat
-[7] https://support.huawei.com/enterprise/en/doc/EDOC1100467681/814bc119/installing-an-ssl-certificate
-[8] https://medium.com/@imageadhikari/static-site-hosting-with-tomcat-a-step-by-step-guide-463d24d7b55e
-[9] https://www.tencentcloud.com/document/product/1007/30956
-[10] https://certpanel.com/resources/how-to-install-an-ssl-certificate-on-nginx-ubuntu-manually-or-automatically/
-[11] https://docs.safe.com/fme/2021.1/html/FME_Server_Documentation/AdminGuide/configuring_for_https.htm
-[12] https://upcloud.com/resources/tutorials/install-lets-encrypt-nginx/
+``` bash
+sudo nano /opt/tomcat/conf/tomcat-users.xml
+```
 
-#### Allow Remote Access
+In this file locate the line with the comment `<!-- Define users and roles here -->` and add the following lines just below it, replacing `admin` and `password` with your desired username and password.
 
-If accessing the Tomcat web interface from another machine, which is the _only_ way to access it if you are installing on an instance without a graphical user interface, you first need to enable access from a machine other than `localhost`. This is accomplished by editing the `context.xml` file. If installed according to the instructions above, this is located in 
+``` xml
+<role rolename="manager-gui"/>
+<role rolename="admin-gui"/>
+<user username="admin" password="password" roles="manager-gui,admin-gui"/>
+```
+
+Restart the Tomcat service to apply the changes.
+
+``` bash
+sudo systemctl restart tomcat
+```
+
+Now, you can access the Tomcat Manager and Host Manager applications by navigating to the following URLs in your web browser:
+- Manager App: `https://<your_server>/manager/html`
+- Host Manager App: `https://<your_server>/host-manager/html`
+
+When prompted, enter the administrator username and password you configured in the `tomcat-users.xml` file, and you should now have access to the Tomcat web interface over HTTPS.
+
+
