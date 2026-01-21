@@ -8,7 +8,11 @@
 PS029504.esri.com
 ```
 
-- Tomcat: <http://PS029504.esri.com:8080>
+- Tomcat: 
+    - Default: <http://PS029504.esri.com:8080>
+    - HTTPS: <https://PS029504.esri.com>
+    - Portal: <https://PS029504.esri.com/portal>
+    - Portal Admin: <https://PS029504.esri.com/portal/home/signin.html>
 
 ### Server:
 

@@ -382,3 +382,41 @@ Now, you can access the Tomcat Manager and Host Manager applications by navigati
 - Host Manager App: `https://<your_server>/host-manager/html`
 
 When prompted, enter the administrator username and password you configured in the `tomcat-users.xml` file, and you should now have access to the Tomcat web interface over HTTPS.
+
+## Install Web Adapter
+
+Procure the installation files for the ArcGIS Web Adapter for Linux from your Esri software repository or download them from the Esri website.
+
+Unpack the installer tarball. This example uses the version 12.0 installer; adjust the filename as necessary for other versions.
+
+``` bash
+tar xvf /tmp/Web_Adapter_for_ArcGIS_Linux_*.tar.gz -C /tmp
+```
+
+Run the setup script as the `arcgis` user.
+
+??? note "Add `arcgis` User"
+
+    If you haven't already done so, create the `arcgis` user and group that will own and run ArcGIS Web Adapter. This example creates the `arcgis` user with a home directory of `/opt/arcgis`, so everything related to ArcGIS software is contained within the `/opt/arcgis` directory.
+
+    ``` bash
+    sudo groupadd arcgis
+    sudo useradd -g arcgis -d /opt/arcgis arcgis
+    sudo mkdir /opt/arcgis
+    sudo chown arcgis:arcgis /opt/arcgis
+    sudo chmod 755 /opt/arcgis
+    ```
+
+    Optionally, copy the bash profile to the new user's home directory.
+
+    ``` bash
+    sudo cp ~/.bashrc /opt/arcgis/.bashrc
+    sudo chown arcgis:arcgis /opt/arcgis/.bashrc
+    ```
+
+Switch to the `arcgis` user and run the Web Adapter setup script in silent mode. Using the `-v` (verbose) flag provides detailed output during the installation process, so you 
+
+``` bash
+sudo su - arcgis -s
+/tmp/WebAdapter/Setup -m silent -l yes -d /opt/arcgis/webadaptor -v
+```

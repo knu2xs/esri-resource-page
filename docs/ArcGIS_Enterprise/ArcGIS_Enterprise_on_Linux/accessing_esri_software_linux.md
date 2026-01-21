@@ -1,5 +1,12 @@
 # Accessing Esri Softare on Linux
 
+## Install CIFS Utilities
+
+Install the CIFS utilities package to enable mounting SMB/CIFS shares.
+
+``` bash
+sudo apt-get install cifs-utils -y
+```
 
 ## Create Credentials File
 
