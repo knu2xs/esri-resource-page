@@ -1,5 +1,9 @@
 # Install ArcGIS Portal on Linux
 
+- References: 
+    - [System Requirements](https://enterprise.arcgis.com/en/web-adaptor/latest/install/java-linux/arcgis-web-adaptor-system-requirements.htm)
+    - [Install ArcGIS Portal on Linux](https://enterprise.arcgis.com/en/web-adaptor/latest/install/java-linux/welcome-arcgis-web-adaptor-install-guide.htm)
+
 ## Set File Handle Limits
 
 Set the lower file handle limits for the `arcgis` user by editing the `/etc/security/limits.conf` file.

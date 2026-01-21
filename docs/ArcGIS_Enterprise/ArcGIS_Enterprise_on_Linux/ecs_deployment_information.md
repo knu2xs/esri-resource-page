@@ -8,26 +8,34 @@
 PS029504.esri.com
 ```
 
-- Tomcat: 
-    - Default: <http://PS029504.esri.com:8080>
-    - HTTPS: <https://PS029504.esri.com>
-    - Portal: <https://PS029504.esri.com/portal>
-    - Portal Admin: <https://PS029504.esri.com/portal/home/signin.html>
+#### Tomcat
+
+- Default: <http://ps029504.esri.com:8080>
+- HTTPS: <https://ps029504.esri.com>
+
+#### Portal
+
+- Portal: <https://ps029504.esri.com/portal>
+- Portal Admin: <https://ps029504.esri.com/portal/portaladmin>
 
 ### Server:
 
 ```
-PS029505.esri.com
+ps029505.esri.com
 ```
+
+- ArcGIS Server: <https://ps029505.esri.com:6443/arcgis>
+- ArcGIS Server Admin: <https://ps029505.esri.com:6443/arcgis/admin>
+- ArcGIS Server Services (Web Adaptor): <https://ps029504.esri.com/server/rest/services>
 
 ### Data Store
 
 ```
-PS029507.esri.com
+ps029507.esri.com
 ```
 
 ### Notebook
 
 ```
-PS029506.esri.com
+ps029506.esri.com
 ```
