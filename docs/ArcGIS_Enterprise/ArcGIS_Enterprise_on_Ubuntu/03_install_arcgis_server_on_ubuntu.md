@@ -1,4 +1,4 @@
-# Install ArcGIS Server on Linux
+# Install ArcGIS Server on Ubuntu
 
 ## Open Required Firewall Ports
 

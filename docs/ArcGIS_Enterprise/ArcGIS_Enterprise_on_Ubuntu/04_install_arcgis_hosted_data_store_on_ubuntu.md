@@ -1,4 +1,4 @@
-# Install ArcGIS Hosted Data Store on Linux
+# Install ArcGIS Hosted Data Store on Ubuntu
 
 ## Open Required Firewall Ports
 
@@ -134,4 +134,14 @@ sudo systemctl enable arcgisdatastore.service
 sudo systemctl stop arcgisdatastore.service
 sudo systemctl start arcgisdatastore.service
 sudo systemctl status arcgisdatastore.service --no-pager
+```
+
+## Create ArcGIS Data Store Directories
+
+Create the ArcGIS Data Store directories and set the appropriate ownership and permissions.
+
+``` bash
+sudo mkdir -p /var/opt/arcgis/datastore
+sudo chown -R arcgis:arcgis /var/opt/arcgis
+sudo chmod -R 755 /var/opt/arcgis
 ```

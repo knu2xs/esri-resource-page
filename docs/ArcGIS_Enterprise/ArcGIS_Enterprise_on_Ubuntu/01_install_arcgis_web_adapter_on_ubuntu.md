@@ -1,4 +1,4 @@
-# Install ArcGIS Web Adapter on Linux
+# Install ArcGIS Web Adapter on Ubuntu
 
 References:
 

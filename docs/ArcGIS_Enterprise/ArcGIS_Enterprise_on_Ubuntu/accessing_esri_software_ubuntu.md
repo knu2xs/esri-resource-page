@@ -1,4 +1,5 @@
-# Accessing Esri Software on Linux
+# Accessing Esri Software on Ubuntu
+
 
 ## Install CIFS Utilities
 

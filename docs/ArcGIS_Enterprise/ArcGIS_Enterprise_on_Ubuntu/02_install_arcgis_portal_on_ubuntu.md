@@ -1,4 +1,4 @@
-# Install ArcGIS Portal on Linux
+# Install ArcGIS Portal on Ubuntu
 
 References: 
 

@@ -8,55 +8,58 @@
 
 ### Enable Windows Containers
 
-- Run the following from an administrator Powershell prompt.
+1. Run the following from an administrator Powershell prompt.
 
-``` powershell
-Add-WindowsFeature Containers
-```
+    ``` powershell
+    Add-WindowsFeature Containers
+    ```
 
-- Restart the instance.
+2. Restart the instance.
 
-- Verify containers installation
+3. Verify containers installation
 
-``` powershell
-Get-WindowsFeature Containers
-```
+    ``` powershell
+    Get-WindowsFeature Containers
+    ```
 
 ### Install Docker Server and Client Binaries
 
-Reference:
+References:
 
-- Download latest static binary archive from [Docker Downloads](https://download.docker.com/win/static/stable/x86_64)
-- Extract archive to Program Files to install from an administrator Powershell prompt.
+    - [DockerDocs: Install Server and Client Binaries on Windows](https://docs.docker.com/engine/install/binaries/#install-server-and-client-binaries-on-windows)
+    - 
 
-``` powershell
-Expand-Archive "%USERPROFILE%\Downloads\docker-*.zip" -DestinationPath $Env:ProgramFiles
-```
+1. Download latest static binary archive from [Docker Downloads](https://download.docker.com/win/static/stable/x86_64)
+2. Extract archive to Program Files to install from an administrator Powershell prompt.
 
-- Register the service
+    ``` powershell
+    Expand-Archive "%USERPROFILE%\Downloads\docker-*.zip" -DestinationPath $Env:ProgramFiles
+    ```
 
-``` powershell
-&$Env:ProgramFiles\Docker\dockerd --register-service
-```
+3. Register the service
 
-- Start the Docker Engine
+    ``` powershell
+    &$Env:ProgramFiles\Docker\dockerd --register-service
+    ```
 
-``` powershell
-Start-Service docker
-```
+4. Start the Docker Engine
 
-- Add Docker to the system PATH
+    ``` powershell
+    Start-Service docker
+    ```
 
-``` powershell
-$p=[Environment]::GetEnvironmentVariable('Path','Machine');$d="${env:ProgramW6432}\Docker"; if($p -notmatch [Regex]::Escape($d)){[Environment]::SetEnvironmentVariable('Path',($p + (';' + $d)),'Machine')}
-```
+5. Add Docker to the system PATH
 
-- Close and reopen an administrative Powershell session to reload the updated PATH varialbe
-- Verify Docker installation using `hello-world` image
+    ``` powershell
+    $p=[Environment]::GetEnvironmentVariable('Path','Machine');$d="${env:ProgramW6432}\Docker"; if($p -notmatch [Regex]::Escape($d)){[Environment]::SetEnvironmentVariable('Path',($p + (';' + $d)),'Machine')}
+    ```
 
-``` bat
-docker run hello-world:nanoserver
-```
+6. Close and reopen an administrative Powershell session to reload the updated PATH varialbe
+7. Verify Docker installation using `hello-world` image
+
+    ``` bat
+    docker run hello-world:nanoserver
+    ```
 
 ### Configure Docker Engine
 
@@ -66,46 +69,46 @@ docker run hello-world:nanoserver
 
     In this example, we are using the `arcgis` user as the ArcGIS Notebook Server user account.
 
-- Start > Computer Management
+1. Start > Computer Management
 - Local Users and Groups > Groups
 - Double click `docker-users` (if doesn't exist, create)
 - Click **Add**. Select `arcgis`, and click **OK** to confirm
 - Click **OK** to close group dialog box.
 - Create config file at ` C:\ProgramData\docker\config\daemon.json` with following content.
 
-``` json
-{
-  "group" : "docker-users"
-}
-```
-
-- Configure your Docker service to listen on a named pipe in an administrator command prompt.
-
-``` powershell
-sc.exe config docker binpath= '"C:\Program Files\docker\dockerd.exe" --run-service -H npipe://'
-```
-
-!!! note "Removal"
-
-    The docker service can be removed using the following Powershell command.
-
-    ``` powershell
-    &"$Env:ProgramFiles\Docker\dockerd" --unregister-service
+    ``` json
+    {
+    "group" : "docker-users"
+    }
     ```
 
-- Restart docker
+- Configure your Docker service to listen on a named pipe (Administrator Command Prompt).
 
-``` bat
-net stop docker && net start docker
-```
+    ``` powershell
+    sc.exe config docker binpath= '"C:\Program Files\docker\dockerd.exe" --run-service -H npipe://'
+    ```
+
+    !!! note "Removal"
+
+        The docker service can be removed using the following Powershell command.
+
+        ``` powershell
+        &"$Env:ProgramFiles\Docker\dockerd" --unregister-service
+        ```
+
+- Restart docker (Administrator Command Prompt):
+
+    ``` bat
+    net stop docker && net start docker
+    ```
 
 ### Ensure Firewall Port 11443 is Open
 
-- Start > Windows System > Control Panel
-- System and Security > Windows Defender Firewall > Advanced Settings (on left side)
-- Inbound Rules > **New Rule** (top right side)
-- Rule Type = **Port**
-- Protocol and Ports > Specific Local Ports = **11443**
+1. Start > Windows System > Control Panel
+2. System and Security > Windows Defender Firewall > Advanced Settings (on left side)
+3. Inbound Rules > **New Rule** (top right side)
+4. Rule Type = **Port**
+5. Protocol and Ports > Specific Local Ports = **11443**
 
 ## Install & Configure Notebook Server
 
@@ -120,27 +123,27 @@ Reference: [Install ArcGIS Notebook Server
 
 Reference: [Configure ArcGIS Notebook Server after installation (Windows containers)](https://enterprise.arcgis.com/en/notebook/latest/install/windows/configure-arcgis-notebook-server-after-installation-windows-containers-.htm)
 
-- Move to the tool directory in an administrator command prompt.
+1. Move to the tool directory (Administrator Command Prompt).
 
-``` bat
-cd "C:\Program Files\ArcGIS\NotebookServer\tools\PostInstallUtility"
-```
+    ``` bat
+    cd "C:\Program Files\ArcGIS\NotebookServer\tools\PostInstallUtility"
+    ```
 
 - Ensure container engine is available and correctly configured.
 
-``` bat
-PostInstallUtility.bat -d
-```
+    ``` bat
+    PostInstallUtility.bat -d
+    ```
 
-!!! note
+    !!! note "Get Comfortable"
 
-    Typically this takes just over 30 minutes to unpack.
+        Typically this takes just over 30 minutes to unpack.
 
 - Load the container image.
 
-``` bat
-PostInstallUtility.bat -l "%USERPROFILE%\Desktop\ArcGIS_Notebook_Windows_Container_Image_*.tar.gz"
-```
+    ``` bat
+    PostInstallUtility.bat -l "%USERPROFILE%\Desktop\ArcGIS_Notebook_Windows_Container_Image_*.tar.gz"
+    ```
  
 #### Check Noteook Server Interal Ports
 

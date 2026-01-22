@@ -33,6 +33,7 @@ ps029505.esri.com
 ```
 ps029507.esri.com
 ```
+- ArcGIS Data Store Admin: <https://ps029507.esri.com:2443/arcgis/datastore>
 
 ### Notebook
 
