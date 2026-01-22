@@ -1,4 +1,4 @@
-# Accessing Esri Softare on Linux
+# Accessing Esri Software on Linux
 
 ## Install CIFS Utilities
 
