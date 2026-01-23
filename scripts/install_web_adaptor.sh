@@ -328,7 +328,7 @@ install_web_adaptor() {
     sudo chmod -R 750 ${OPT_ARCGIS}/webadaptor
     
     # Run the installer as tomcat user
-    sudo -u ${TOMCAT_USER} /tmp/WebAdapter/Setup -m silent -l yes -d ${OPT_ARCGIS}/webadaptor -v
+    sudo -u ${TOMCAT_USER} /tmp/WebAdapter/Setup -m silent -l yes -d /opt -v
     
     # Cleanup
     rm -rf /tmp/WebAdapter

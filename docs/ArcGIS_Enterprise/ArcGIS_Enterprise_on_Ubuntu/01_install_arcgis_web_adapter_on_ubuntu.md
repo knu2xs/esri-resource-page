@@ -136,9 +136,9 @@ sudo chown -R tomcat:tomcat /var/opt/tomcat/
 sudo chmod -R 750 /var/opt/tomcat/
 ```
 
-## Service Configuration
+#### Service Configuration
 
-### Create Systemd Unit File
+##### Create Systemd Unit File
 
 To run Tomcat as a service that can be started and stopped easily, create a systemd unit file.
 
@@ -180,7 +180,7 @@ To run Tomcat as a service that can be started and stopped easily, create a syst
     WantedBy=multi-user.target
     ```
 
-## Start and Enable the Tomcat Service
+##### Start and Enable the Tomcat Service
 
 Reload systemd to recognize the new service and start Tomcat.
 
@@ -200,9 +200,9 @@ You can now access the default Tomcat web interface by navigating to `http://<yo
 
 ![Tomcat Landing Page](../../assets/tomcat_landing_page.png)
 
-## Configure Tomcat for HTTPS with PFX Certificate
+#### Configure Tomcat for HTTPS with PFX Certificate
 
-### Create Certificate Directory
+##### Create Certificate Directory
 
 Create a directory and set permissions to store your SSL/TLS certificate files.
 
@@ -212,7 +212,7 @@ sudo chown -R root:tomcat /etc/opt/tomcat/cert
 sudo chmod -R 750 /etc/opt/tomcat/cert
 ```
 
-### Move Your PFX Certificate to the Server
+##### Move Your PFX Certificate to the Server
 
 ??? note "Esri Internal Certificates"
 
@@ -287,7 +287,7 @@ sudo chmod -R 750 /etc/opt/tomcat/cert
 
 Use a secure file transfer protocol (SCP or SFTP) client (like WinSCP, or the  command line tool) to upload your PFX file from your local machine to the server directory.
 
-### Configure Tomcat for SSL/TLS with the PFX Certificate
+#### Configure Tomcat for SSL/TLS with the PFX Certificate
 
 Open the Tomcat `server.xml` configuration file in a text editor such as `nano`.
 
@@ -319,7 +319,7 @@ Locate the existing `<Connector>` element for port 8443 (commented out by defaul
      </Connector>
 ```
 
-#### Enable Remote Access
+### Enable Remote Access
 
 If accessing the Tomcat web interface from another machine, which is the _only_ way to access it if you are installing on an instance without a graphical user interface, you first need to enable access from a machine other than `localhost` for the docs and admin pages.
 
@@ -373,6 +373,10 @@ Reference: [ArcGIS Web Adaptor Installation Guide](https://enterprise.arcgis.com
 
 Procure the installation files for the ArcGIS Web Adapter for Linux from the Esri software repository or download them from the Esri customer care website.
 
+``` bash
+cp /mnt/software/120_Final/Web_Adapter_for_ArcGIS_Linux_*.tar.gz /tmp
+```
+
 ### Unpack the Installer
 
 Unpack the installer tarball. This example uses the version 12.0 installer; adjust the filename as necessary for other versions.
@@ -400,12 +404,12 @@ Run the setup script as the `tomcat` user.
     The ArcGIS Web Adapter for Java requires a Java application server to run, and will be copied from this location to the Tomcat web applications directory. In this installation, we are using Apache Tomcat, which we have configured to run under the `tomcat` user. Therefore, we install the Web Adapter as the `tomcat` user to ensure proper permissions and integration with the Tomcat server when deploying the Web Adapter application to Tomcat.
 
 ``` bash
-sudo -u tomcat /tmp/WebAdapter/Setup -m silent -l yes -d /opt/arcgis/webadaptor -v
+sudo -u tomcat /tmp/WebAdapter/Setup -m silent -l yes -d /opt -v
 ```
 
 Once installed, the web adapter can be configured to support specific ArcGIS Enterprise components (Portal for ArcGIS and ArcGIS Server) following installation as part of the configuration process for the necessary components.
 
-## Install Portal and Server Web Adapters (Optinal)
+## Install Portal and Server Web Adapters (Optional)
 
 Although we cannot configure them until the respective components are installed, we can install both the Portal for ArcGIS Web Adapter and the ArcGIS Server Web Adapter now. All we need to do is deploy the respective WAR files to the Tomcat web applications directory, and retart Tomcat.
 
