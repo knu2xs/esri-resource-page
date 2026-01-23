@@ -381,7 +381,7 @@ Unpack the installer tarball. This example uses the version 12.0 installer; adju
 tar xvf /tmp/Web_Adapter_for_ArcGIS_Linux_*.tar.gz -C /tmp
 ```
 
-### Create tje Installation Directory
+### Create the Installation Directory
 
 Create the installation directory for the ArcGIS Web Adapter.
 

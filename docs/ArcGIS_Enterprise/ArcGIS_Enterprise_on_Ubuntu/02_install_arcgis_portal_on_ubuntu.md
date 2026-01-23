@@ -5,55 +5,59 @@ References:
 - [System Requirements](https://enterprise.arcgis.com/en/web-adaptor/latest/install/java-linux/arcgis-web-adaptor-system-requirements.htm)
 - [Install ArcGIS Portal on Linux](https://enterprise.arcgis.com/en/web-adaptor/latest/install/java-linux/welcome-arcgis-web-adaptor-install-guide.htm)
 
-## Set File Handle Limits
+## Update System Packages
 
-Set the lower file handle limits for the `arcgis` user by editing the `/etc/security/limits.conf` file.
+Start by updating your package lists and upgrading existing packages to their latest versions if this has not already been done.
 
 ``` bash
-sudo nano /etc/security/limits.conf
+sudo apt update
+sudo apt upgrade -y
 ```
 
-Add the following lines to the end of the file:
+## Firewall Configuration
+
+Open the required firewall ports for Portal for ArcGIS.
 
 ``` bash
-arcgis           soft    nofile          65535
-arcgis           hard    nofile          unlimited
+sudo ufw allow 7443
 ```
 
-## Create the `arcgis` User and Group
+## Service User
 
-If you haven't already done so, create the `arcgis` user and group that will own and run Portal for ArcGIS. This example creates the `arcgis` user with a home directory of `/opt/arcgis`, so everything related to ArcGIS software is contained within the `/opt/arcgis` directory.
+If you haven't already done so, create the `arcgis` user and group that will own and run Portal for ArcGIS.
 
 ``` bash
-sudo groupadd arcgis
-sudo useradd -g arcgis -d /opt/arcgis arcgis
-sudo mkdir /opt/arcgis
+sudo useradd -s /bin/false -m -U arcgis
+```
+
+- `-s /bin/false` — Disables shell login for the user, preventing interactive access
+- `-m` — Creates the home directory `/home/arcgis`
+- `-U` — Creates a group with the same name as the user
+- `arcgis` — The username
+
+## Create the Installation Directories
+
+Create the installation directory for ArcGIS Enterprise software following the [Filesystem Hierarchy Standard](https://refspecs.linuxbase.org/FHS_3.0/fhs-3.0.html#optOptionalApplicationSoftwarePackages) and set ownership and permissions for the `arcgis` user.
+
+Based on FHS, application software should be installed in `/opt`, variable data in `/var/opt`, and configuration files in `/etc/opt`. Following this standard, the directories for Portal will be the following:
+
+- `/opt/arcgis` — Application binaries (read-only)
+- `/var/opt/arcgis` — Variable data
+- `/etc/opt/arcgis` — Configuration files (read-only for non-root users in the `arcgis` group)
+
+``` bash
+sudo mkdir -p /opt/arcgis
 sudo chown arcgis:arcgis /opt/arcgis
-sudo chmod 755 /opt/arcgis
+sudo chmod 750 /opt/arcgis
+sudo mkdir -p /var/opt/arcgis
+sudo chown arcgis:arcgis /var/opt/arcgis
+sudo chmod 750 /var/opt/arcgis
+sudo mkdir -p /etc/opt/arcgis
+sudo chown root:arcgis /etc/opt/arcgis
+sudo chmod 750 /etc/opt/arcgis
 ```
 
-Optionally, copy the bash profile to the new user's home directory.
-
-``` bash
-sudo cp ~/.bashrc /opt/arcgis/.bashrc
-sudo chown arcgis:arcgis /opt/arcgis/.bashrc
-```
-
-## Copy and Unpack the Installer
-
-Copy the Portal for ArcGIS installer from the mounted Esri software share to a local directory, such as `/tmp`, and unpack it.
-
-``` bash
-cp /mnt/software/120_Final/Portal_for_ArcGIS_Linux_120_197821.tar.gz /tmp
-```
-
-Unpack the installer tarball. This example uses the version 12.0 installer; adjust the filename as necessary for other versions.
-
-``` bash
-tar xvf /tmp/Portal_for_ArcGIS_Linux_120_197821.tar.gz -C /tmp
-```
-
-## Extend the `/opt` Volume (if necessary)
+### Extend the Volumes (if necessary)
 
 Check to ensure there is enogh space on the `/opt` volume to install Portal for ArcGIS. If there is not enough space, extend the logical volume and resize the filesystem.
 
@@ -69,29 +73,70 @@ There needs to be at least 20 GB of free space to install Portal for ArcGIS. If 
 sudo lvextend -L +10G /dev/vg_os/lv_opt --resizefs
 ```
 
+Since we are going to be using the `/var` volume for Portal data, also check the available space on the `/var` volume.
+
+``` bash
+df -h /var
+``` 
+
+There should to be at least 50 GB of free space on the `/var` volume to accommodate Portal data. If there is not enough space, extend the logical volume and resize the filesystem.
+
+``` bash
+sudo lvextend -L +20G /dev/vg_os/lv_var --resizefs
+```
+
+## Set File Handle Limits
+
+Set the file handle limits for the `arcgis` user to ensure Portal for ArcGIS can handle multiple concurrent connections, REST API requests, and caching operations. Create a dedicated configuration file in `/etc/security/limits.d/` to set these limits:
+
+``` bash
+echo -e "arcgis\tsoft\tnofile\t65536\narcgis\thard\tnofile\tunlimited" | sudo tee /etc/security/limits.d/arcgis.conf
+```
+
+Alternatively, you can create the file manually:
+
+``` bash
+sudo nano /etc/security/limits.d/arcgis.conf
+```
+
+Add the following lines:
+
+``` bash
+arcgis           soft    nofile          65536
+arcgis           hard    nofile          unlimited
+```
+
+## Copy and Unpack the Installer
+
+Copy the Portal for ArcGIS installer from the mounted Esri software share to `/tmp`, and unpack it.
+
+``` bash
+cp /mnt/software/120_Final/Portal_for_ArcGIS_Linux_*.tar.gz /tmp
+```
+
+Unpack the installer tarball.
+
+``` bash
+tar xvf /tmp/Portal_for_ArcGIS_Linux_*.tar.gz -C /tmp
+```
+
 ## Install Portal for ArcGIS
 
-Now, run the Portal for ArcGIS installer as the `arcgis` user.
-
-!!! "Install as `arcgis`"
-
-    If not the `arcgis` user, use `sudo su - arcgis` to switch to the `arcgis` user before running the installer.
+Run the Portal for ArcGIS installer as the `arcgis` user. Use `sudo -u arcgis` to run the command as the `arcgis` user without changing the shell:
 
 ``` bash
-./Setup -m silent -l yes -d /opt/arcgis/portal -v
+sudo -u arcgis /tmp/PortalforArcGIS/Setup -m silent -l yes -d /opt/arcgis/portal -v
 ```
 
-## Open Required Firewall Ports
-
-Open the required firewall ports for Portal for ArcGIS.
-
-``` bash
-sudo ufw allow 7443
-```
+- `sudo -u arcgis` — Runs the following command as the `arcgis` user
+- `-m silent` — Runs the installer in silent mode
+- `-l yes` — Accepts the license agreement
+- `-d /opt/arcgis/portal` — Specifies the installation directory
+- `-v` — Enables verbose output
 
 ## Create Portal for ArcGIS Data Directory
 
-Create the Portal for ArcGIS data directory and set the appropriate ownership and permissions.
+Following the [Filesystem Hierarchy Standard](https://refspecs.linuxbase.org/FHS_3.0/fhs-3.0.html#varoptVariableDataForOpt), variable data such as logs, caches, and content for Portal for ArcGIS are stored in `/var/opt/arcgis/portal`. Create the directory and set the appropriate ownership and permissions:
 
 ``` bash
 sudo mkdir -p /var/opt/arcgis/portal
@@ -99,47 +144,71 @@ sudo chown -R arcgis:arcgis /var/opt/arcgis
 sudo chmod -R 755 /var/opt/arcgis
 ```
 
-## Configure Portal for ArcGIS to Start at Boot
+- `mkdir -p` — Creates the directory and any necessary parent directories
+- `chown -R arcgis:arcgis` — Recursively sets the owner and group to `arcgis`
+- `chmod -R 755` — Recursively sets permissions (owner: read/write/execute, group and others: read/execute)
 
-Configure the Portal for ArcGIS service to start automatically when the system boots using systemd by copying the service file and enabling the service.
+## Service Configuration
+
+Configure the Portal for ArcGIS service to start automatically when the system boots using `systemd`.
+
+Start by copying the service file provided by the installer to `/etc/systemd/system/`.
 
 ``` bash
 sudo cp /opt/arcgis/portal/framework/etc/arcgisportal.service /etc/systemd/system/
-sudo chown root:root /etc/systemd/system/arcgisportal.service
-sudo chmod 640 /etc/systemd/system/arcgisportal.service
-sudo systemctl enable arcgisportal.service
-sudo systemctl stop arcgisportal.service
-sudo systemctl start arcgisportal.service
-sudo systemctl status arcgisportal.service
 ```
+
+Next, check to ensure the unit file will run as the `arcgis` user. Open the service file in a text editor.
+
+``` bash
+sudo nano /etc/systemd/system/arcgisportal.service
+```
+
+Ensure the following lines are present in the `[Service]` section:
+
+``` ini
+User=arcgis
+Group=arcgis
+```
+
+Now, set the correct ownership and permissions on the unit file.
+
+``` bash
+sudo chown root:root /etc/systemd/system/arcgisportal.service
+sudo chmod 644 /etc/systemd/system/arcgisportal.service
+```
+
+Reload the systemd daemon to recognize the new service file. Then, enable and start the service.
+
+``` bash
+sudo systemctl daemon-reload
+sudo systemctl enable arcgisportal.service
+sudo systemctl start arcgisportal.service
+```
+
+Verify the service is running correctly:
+
+``` bash
+sudo systemctl status arcgisportal.service --no-pager
+```
+
+The status will either be `active (running)` if everything is functioning properly, or `failed` if there are issues that need to be addressed.
 
 ## Create a Portal for ArcGIS Site
 
-This has to be done through the Portal for ArcGIS web interface. Open a web browser and navigate to `https://<portal_hostname>:7443/portal/webadaptor`. Follow the prompts to create the initial site, specifying the data directory created in the previous step, making the content directory `/var/opt/arcgis/portal/content`, and setting the initial administrator account.
+This has to be done through the Portal for ArcGIS web interface. There is not a scrip to perform this stop. 
 
-``` bash
-/var/opt/arcgis/portal/content
-```
+Open a web browser and navigate to `https://<portal_hostname>:7443/portal/webadaptor`. Follow the prompts to create the initial site, specifying the data directory created in the previous step, making the content directory `/var/opt/arcgis/portal/content`, and setting the initial administrator account.
 
 ## Configure Portal for ArcGIS Web Adaptor
 
 Web Adapter configuration must be done on the web server where the web adaptor is installed. The following steps shall be performed on the web server where the ArcGIS Web Adaptor is installed.
 
-Move the `arcgis.war` file to the Tomcat webapps directory, and rename it to `portal.war`. When Tomcat restarts, it will deploy the web adaptor for Portal for ArcGIS as `https://<webserver.domain.com>/portal`.
+!!! warning "Ensure Portal Web Adaptor is Installed"
 
-``` bash
-sudo mv /opt/tomcat/webapps/arcgis.war /opt/tomcat/webapps/portal.war
-sudo chown tomcat:tomcat /opt/tomcat/webapps/portal.war
-```
+    If you have not already done so, install the ArcGIS Web Adaptor following the instructions in the [Install ArcGIS Web Adaptor on Ubuntu](01_install_arcgis_web_adapter_on_ubuntu.md) guide and deploy the WAR file for Portal (`portal.war`).
 
-Restart the Tomcat service to deploy the web adaptor.
-
-``` bash
-sudo systemctl restart tomcat
-sudo systemctl status tomcat --no-pager
-```
-
-Since there is no GUI on the Linux server, use the command line interface to configure the web adaptor. Run the following command, replacing the placeholders with your actual values.
+Since there is no GUI on the Linux server, use the command line interface to configure the web adaptor. Run the following command on the web server where the ArcGIS Web Adaptor is installed, replacing the placeholders with your actual values.
 
 ``` bash
 /opt/arcgis/webadaptor12.0/java/tools/configurewebadaptor.sh -m portal -w https://<webserver.domain.com>/portal/webadaptor -g portalserver.domain.com -u portaladmin -p P@ssw0rd
@@ -147,4 +216,4 @@ Since there is no GUI on the Linux server, use the command line interface to con
 
 ## Verify the Installation
 
-Now, you are ready to access the Portal for ArcGIS site. Open a web browser and navigate to `https://<webserver.domain.com>/portal`. Log in using the administrator account you created earlier to verify that the installation was successful.
+Now, you are ready to access the Portal for ArcGIS site. Open a web browser and navigate to `https://<webserver.domain.com>/portal`. Log in using the administrator account you created earlier in the Portal for ArcGIS site creation step to verify that the installation was successful.
