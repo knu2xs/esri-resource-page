@@ -36,17 +36,28 @@ sudo useradd -g tomcat -d /opt/tomcat tomcat
 
 !!! note
 
-    It is a best practice to configure the `tomcat` user without login capabilities for security reasons, but for ease of use, we will allow login in this guide. If truly following best practices, use the following command instead to create the `tomcat` user without login capabilities:
+    It is a best practice to configure the `tomcat` user without login capabilities for security reasons, but for ease of use (connecting remotely via VS Code to edit files), we will allow login in this guide. If truly following best practices, use the following command instead to create the `tomcat` user without login capabilities:
 
     ``` bash
     sudo useradd -s /bin/false -g tomcat -d /opt/tomcat tomcat
     ```
 
-Also, although optional, it is useful to set a user password and default shell (`bash`) as well. This enables remote login as the `tomcat` user if needed for troubleshooting or maintenance, and allows you to access the Tomcat installation directory from a remote VS Code session over SSH. This makes editing the configuration files much easier.
+    If after installation you want to disable login for the `tomcat` user, you can change the shell to `/bin/false` using the following command:
+
+    ``` bash
+    sudo chsh -s /bin/false tomcat
+    ```
+
+    However, if, for some reason you do need to enable login again, you can change the shell back to `bash`:
+
+    ``` bash
+    sudo chsh -s /bin/bash tomcat
+    ```
+
+Also, although optional, it is useful to set a user password and default shell (`bash`) as well. This allows you to access the Tomcat installation directory from a remote VS Code session over SSH. This makes editing the configuration files much easier.
 
 ``` bash
 sudo passwd tomcat
-sudo usermod -s /bin/bash tomcat
 ```
 
 Finally, if you want the same behavior (mostly bash coloring) as the current user (`linux` on Esri ECS instance), copy the current user's bash profile to the `tomcat` user.
@@ -55,16 +66,6 @@ Finally, if you want the same behavior (mostly bash coloring) as the current use
 sudo cp ~/.bashrc /opt/tomcat/
 sudo chown tomcat:tomcat /opt/tomcat/.bashrc
 ```
-
-!!! note "Run as Tomcat User"
-
-    You can switch to the `tomcat` user at any time using the following command:
-
-    ``` bash
-    sudo -u tomcat -s
-    ```
-
-    You can verify this by using the `whoami` command to ensure you are now working as the `tomcat` user.
 
 ### Authbind
 
@@ -138,9 +139,11 @@ To run Tomcat as a service that can be started and stopped easily, create a syst
     [Service]
     Type=forking
 
+    # although the service is started as root, it runs as the tomcat user
     User=tomcat
     Group=tomcat
 
+    # environment variables, where to find Java and Tomcat
     Environment="JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64"
     Environment="CATALINA_PID=/opt/tomcat/temp/tomcat.pid"
     Environment="CATALINA_HOME=/opt/tomcat"
@@ -155,6 +158,10 @@ To run Tomcat as a service that can be started and stopped easily, create a syst
     [Install]
     WantedBy=multi-user.target
     ```
+
+    !!! note
+
+        Setting `User` and `Group` to `tomcat` ensures that the Tomcat service runs with the least privileges necessary, enhancing security by limiting access to system resources. Although the service is started with root privileges, it immediately switches to the `tomcat` user and group for all operations, reducing the risk of unauthorized access or modifications to system files.
 
 #### Start and Enable the Tomcat Service
 
