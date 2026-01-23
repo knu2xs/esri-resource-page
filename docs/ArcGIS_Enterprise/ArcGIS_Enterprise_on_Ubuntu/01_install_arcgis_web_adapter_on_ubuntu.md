@@ -1,12 +1,36 @@
 # Install ArcGIS Web Adapter on Ubuntu
 
-References:
+Reference: [System Requirements](https://enterprise.arcgis.com/en/web-adaptor/latest/install/java-linux/arcgis-web-adaptor-system-requirements.htm)
 
-- [System Requirements](https://enterprise.arcgis.com/en/web-adaptor/latest/install/java-linux/arcgis-web-adaptor-system-requirements.htm)
-- [Medium: Installing Apache Tomcat on Ubuntu 22.04](https://medium.com/@madhavarajas1997/installing-apache-tomcat-on-ubuntu-22-04-08c8eda52312)
-- [ArcGIS Web Adaptor Installation Guide](https://enterprise.arcgis.com/en/web-adaptor/latest/install/java-linux/welcome-arcgis-web-adaptor-install-guide.htm)
+## Update System Packages
 
-## Install and Configure System Requrements
+Start by updating your package lists and upgrading existing packages to their latest versions if this has not already been done.
+
+``` bash
+sudo apt update
+sudo apt upgrade -y
+```
+
+## Firewall Configuration
+
+If UFW (Uncomplicated Firewall) is enabled on your Ubuntu system, you need to allow traffic on the ports that Tomcat will use. By default, Tomcat uses port 8080 for HTTP and port 443 will be configured for HTTPS to use with the ArcGIS Web Adaptor.
+
+``` bash
+sudo ufw allow 22,443,8080/tcp
+sudo ufw enable
+```
+
+## Service User
+
+Create a user and group for both `tomcat` that will own and run the Tomcat service.
+
+``` bash
+sudo useradd -s /bin/false -m -U tomcat
+```
+
+## Install and Configure System Requirements
+
+Reference: [ArcGIS Web Adaptor System Requirements](https://enterprise.arcgis.com/en/web-adaptor/latest/install/java-linux/arcgis-web-adaptor-system-requirements.htm)
 
 ### Java
 
@@ -25,48 +49,6 @@ Verify the Java installation.
 java -version
 ```
 
-### Create Tomcat User
-
-For security best practices, create a non-root user (`tomcat`) and group (`tomcat`) to run the Tomcat service. 
-
-``` bash
-sudo groupadd tomcat
-sudo useradd -g tomcat -d /opt/tomcat tomcat
-```
-
-!!! note
-
-    It is a best practice to configure the `tomcat` user without login capabilities for security reasons, but for ease of use (connecting remotely via VS Code to edit files), we will allow login in this guide. If truly following best practices, use the following command instead to create the `tomcat` user without login capabilities:
-
-    ``` bash
-    sudo useradd -s /bin/false -g tomcat -d /opt/tomcat tomcat
-    ```
-
-    If after installation you want to disable login for the `tomcat` user, you can change the shell to `/bin/false` using the following command:
-
-    ``` bash
-    sudo chsh -s /bin/false tomcat
-    ```
-
-    However, if, for some reason you do need to enable login again, you can change the shell back to `bash`:
-
-    ``` bash
-    sudo chsh -s /bin/bash tomcat
-    ```
-
-Also, although optional, it is useful to set a user password and default shell (`bash`) as well. This allows you to access the Tomcat installation directory from a remote VS Code session over SSH. This makes editing the configuration files much easier.
-
-``` bash
-sudo passwd tomcat
-```
-
-Finally, if you want the same behavior (mostly bash coloring) as the current user (`linux` on Esri ECS instance), copy the current user's bash profile to the `tomcat` user.
-
-``` bash
-sudo cp ~/.bashrc /opt/tomcat/
-sudo chown tomcat:tomcat /opt/tomcat/.bashrc
-```
-
 ### Authbind
 
 To allow Tomcat to bind to ports below 1024 (like 80 and 443) without running as root, install and configure `authbind`.
@@ -80,6 +62,8 @@ sudo chmod 500 /etc/authbind/byport/443
 
 ### Tomcat Server
 
+- [Medium: Installing Apache Tomcat on Ubuntu 22.04](https://medium.com/@madhavarajas1997/installing-apache-tomcat-on-ubuntu-22-04-08c8eda52312)
+
 #### Download Apache Tomcat 10.1
 
 Tomcat is not available in the default Ubuntu repositories, so you must download the binary distribution manually. 
@@ -92,34 +76,69 @@ cd /tmp
 
 2. Visit the official [Apache Tomcat 10 Software Downloads](https://www.google.com/url?sa=i&source=web&rct=j&url=https://tomcat.apache.org/download-10.cgi&ved=2ahUKEwij0qie14mSAxWEmGoFHQRYB84Qy_kOegQIDBAE&opi=89978449&cd&psig=AOvVaw10ehzpfYEwMvNo8KYnvwip&ust=1768433752574000) page to find the latest stable version and get the download link for the `*.tar.gz` file.
 
-3. Use wget to download the package (replace the URL with the current version's link if a newer one is available).
+3. Use wget to download the package (replace the URL with the current version's link).
 
 ``` bash
-wget dlcdn.apache.org
+wget //dlcdn.apache.org/tomcat/tomcat-10/v<version>/bin/apache-tomcat-<version>.tar.gz
 ```
 
-4. Create the destination directory and extract the archive.
+4. Create the destination directories and extract the archive. We use a FHS-compliant layout:
+    - `/opt/tomcat` - Application binaries (read-only)
+    - `/etc/opt/tomcat` - Configuration files
+    - `/var/opt/tomcat` - Variable data (logs, temp, work, webapps)
 
 ``` bash
-sudo mkdir /opt/tomcat
+# Create directory structure
+sudo mkdir -p /opt/tomcat
+sudo mkdir -p /etc/opt/tomcat
+sudo mkdir -p /var/opt/tomcat/{logs,temp,work,webapps}
+
+# Extract Tomcat to /opt/tomcat
 sudo tar xvf apache-tomcat-*.tar.gz -C /opt/tomcat --strip-components=1
+
+# Move configuration files to /etc/opt/tomcat
+sudo mv /opt/tomcat/conf/* /etc/opt/tomcat/
+sudo rmdir /opt/tomcat/conf
+sudo ln -s /etc/opt/tomcat /opt/tomcat/conf
+
+# Move variable directories to /var/opt/tomcat and create symlinks
+sudo rm -rf /opt/tomcat/logs /opt/tomcat/temp /opt/tomcat/work /opt/tomcat/webapps
+sudo ln -s /var/opt/tomcat/logs /opt/tomcat/logs
+sudo ln -s /var/opt/tomcat/temp /opt/tomcat/temp
+sudo ln -s /var/opt/tomcat/work /opt/tomcat/work
+sudo ln -s /var/opt/tomcat/webapps /opt/tomcat/webapps
+
+# Copy default webapps to new location
+sudo tar xvf apache-tomcat-*.tar.gz -C /tmp --strip-components=1 apache-tomcat-*/webapps
+sudo mv /tmp/webapps/* /var/opt/tomcat/webapps/
 ```
 
 #### Configure Permissions
 
-Change the owner and group of the entire `/opt/tomcat/` directory (and contents) to the `tomcat` user and `tomcat` group. This ensures the Tomcat service has proper permissions to read and write files within the installation directory.
+Set ownership and permissions for each directory according to its purpose:
+
+- `/opt/tomcat` - Owned by root, readable by tomcat (binaries should be read-only)
+- `/etc/opt/tomcat` - Owned by root, readable by tomcat (config files)
+- `/var/opt/tomcat` - Owned by tomcat (writable for logs, temp files, etc.)
 
 ``` bash
-sudo chown -R tomcat:tomcat /opt/tomcat/
-```
-
-Next, set the appropriate permissions for the Tomcat binary files for the owner (user) on all files and directories recursively within `/opt/tomcat/bin`. This allows the Tomcat startup scripts to be executable by the owner user account (`tomcat`).
-
-``` bash
+# Binary directory - root owns, tomcat can read/execute
+sudo chown -R root:tomcat /opt/tomcat/
+sudo chmod -R 750 /opt/tomcat/
 sudo chmod -R u+x /opt/tomcat/bin
+
+# Configuration directory - root owns, tomcat can read
+sudo chown -R root:tomcat /etc/opt/tomcat/
+sudo chmod -R 750 /etc/opt/tomcat/
+
+# Variable data directory - tomcat owns (needs write access)
+sudo chown -R tomcat:tomcat /var/opt/tomcat/
+sudo chmod -R 750 /var/opt/tomcat/
 ```
 
-#### Create `systemd` Service File
+## Service Configuration
+
+### Create Systemd Unit File
 
 To run Tomcat as a service that can be started and stopped easily, create a systemd unit file.
 
@@ -145,8 +164,10 @@ To run Tomcat as a service that can be started and stopped easily, create a syst
 
     # environment variables, where to find Java and Tomcat
     Environment="JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64"
-    Environment="CATALINA_PID=/opt/tomcat/temp/tomcat.pid"
     Environment="CATALINA_HOME=/opt/tomcat"
+    Environment="CATALINA_BASE=/opt/tomcat"
+    Environment="CATALINA_PID=/var/opt/tomcat/temp/tomcat.pid"
+    Environment="CATALINA_TMPDIR=/var/opt/tomcat/temp"
 
     # Startup using authbind so can use port 443
     ExecStart=/usr/bin/authbind --deep /opt/tomcat/bin/startup.sh
@@ -159,17 +180,9 @@ To run Tomcat as a service that can be started and stopped easily, create a syst
     WantedBy=multi-user.target
     ```
 
-    !!! note
-
-        Setting `User` and `Group` to `tomcat` ensures that the Tomcat service runs with the least privileges necessary, enhancing security by limiting access to system resources. Although the service is started with root privileges, it immediately switches to the `tomcat` user and group for all operations, reducing the risk of unauthorized access or modifications to system files.
-
-#### Start and Enable the Tomcat Service
+## Start and Enable the Tomcat Service
 
 Reload systemd to recognize the new service and start Tomcat.
-
-!!! note
-
-    If you are working as the `tomcat` user, you may have to go back to a user with `sudo` privelages. You can drop out of of the `tomcat` session by simply using the command `exit`.
 
 ``` bash
 sudo systemctl daemon-reload
@@ -183,40 +196,23 @@ Check the status of the service to ensure it is running correctly.
 sudo systemctl status tomcat
 ```
 
-#### Adjust Firewall and Access Web Interface
-
-References:
-
-- [Ubuntu Server Documentation: Firewall](https://documentation.ubuntu.com/server/how-to/security/firewalls/)
-- [Ubuntu Manuals: UFW8](https://manpages.ubuntu.com/manpages/focal/man8/ufw.8.html)
-- [Ubuntu How-To: Firewalls](https://documentation.ubuntu.com/server/how-to/security/firewalls/)
-- [Ubuntu Wiki: Uncomplicated Firewall](https://wiki.ubuntu.com/UncomplicatedFirewall)
-
-If you are running a firewall (UFW is common on Ubuntu), allow traffic on port 8080, which is the default Tomcat port.
-
-``` bash
-sudo ufw allow 8080
-sudo ufw allow 443
-sudo ufw enable # if firewall is not already enabled
-```
-
-!!! note "Checking UFW Status"
-
-    You can check the status of UFW and see the allowed ports by running:
-
-    ``` bash
-    sudo ufw status
-    ```
-
 You can now access the default Tomcat web interface by navigating to `http://<your_server>:8080` in your web browser.
 
 ![Tomcat Landing Page](../../assets/tomcat_landing_page.png)
 
-#### Install Server Certificates
+## Configure Tomcat for HTTPS with PFX Certificate
 
-To install a PFX server certificate on Ubuntu for Tomcat, you need to upload the PFX file to the server and then configure Tomcat's file to point to the certificate file and specify the  keystore type. \[[1], [2]\]  
+### Create Certificate Directory
 
-##### Upload the PFX Certificate to the Ubuntu Server
+Create a directory and set permissions to store your SSL/TLS certificate files.
+
+``` bash
+sudo mkdir /etc/opt/tomcat/cert
+sudo chown -R root:tomcat /etc/opt/tomcat/cert
+sudo chmod -R 750 /etc/opt/tomcat/cert
+```
+
+### Move Your PFX Certificate to the Server
 
 ??? note "Esri Internal Certificates"
 
@@ -289,36 +285,14 @@ To install a PFX server certificate on Ubuntu for Tomcat, you need to upload the
 
     This creates a proper full-chain PFX file named `tomcat_fullchain.p12` that can be used directly in Tomcat.
 
+Use a secure file transfer protocol (SCP or SFTP) client (like WinSCP, or the  command line tool) to upload your PFX file from your local machine to the server directory.
 
-1. Log in to your Ubuntu server via SSH. 
-2. Navigate to a secure directory within your Tomcat installation, or create one specifically for storing certificates. For example, you can create a `cert` directory under the Tomcat installation directory.
+### Configure Tomcat for SSL/TLS with the PFX Certificate
 
-    ``` bash
-    cd /opt/tomcat
-    mkdir cert
-    cd cert
-    ```
-
-3. Use a secure file transfer protocol (SCP or SFTP) client (like WinSCP, or the  command line tool) to upload your PFX file and the associated password file (`keystorePass.txt`, if provided by your CA) from your local machine to the server directory. \[[1]\]
-
-4. If you are doing this as another user other than `tomcat`, change the ownership of the `cert` directory using the following command.
-
-    ``` bash
-    sudo chown -R tomcat:tomcat /opt/tomcat/cert
-    ```
-
-5. Set permissions for `cert` directory.
-
-    ``` bash
-    sudo chmod -R 750 /opt/tomcat/cert
-    ```
-
-##### Configure Tomcat for SSL/TLS with the PFX Certificate
-
-Open the Tomcat `server.xml` configuration file in a text editor.
+Open the Tomcat `server.xml` configuration file in a text editor such as `nano`.
 
 ``` bash
-sudo nano /opt/tomcat/conf/server.xml
+sudo nano /etc/opt/tomcat/server.xml
 ```
 
 Locate the existing `<Connector>` element for port 8443 (commented out by default) and modify it to use port 443 and the PFX keystore. Replace the existing `<Connector>` element with the following configuration, making sure to update the `certificateKeystorePassword` attribute with the actual password for your PFX file.
@@ -349,7 +323,9 @@ Locate the existing `<Connector>` element for port 8443 (commented out by defaul
 
 If accessing the Tomcat web interface from another machine, which is the _only_ way to access it if you are installing on an instance without a graphical user interface, you first need to enable access from a machine other than `localhost` for the docs and admin pages.
 
-In the Tomcat root directory, (`/opt/tomcat/`), installed applications are directories under the `webapps` folder. To enable access to the default installed applications in the directoriese `docs`, `manager` and `host-manager`, locate the configuration files for these applications in the `META-INF` subdirectory of each application. Within each of the `META-INF` directories, there is a `context.xml` file that contains a `<Valve>` element restricting access to `localhost` by default. To allow access from other machines, comment out the `<Valve>` element in both `context.xml` files.
+Installed applications are directories under `/var/opt/tomcat/webapps`. To enable access to the default installed applications in the directories `docs`, `manager` and `host-manager`, locate the configuration files for these applications in the `META-INF` subdirectory of each application. 
+
+Within each of the `META-INF` directories, there is a `context.xml` file that contains a `<Valve>` element restricting access to `localhost` by default. To allow access from other machines, comment out the `<Valve>` element in both `context.xml` files.
 
 ``` xml
 <Valve className="org.apache.catalina.valves.RemoteAddrValve"
@@ -365,10 +341,10 @@ Enclose this line in comment tags, like so:
 -->
 ```
 
-Next, you need to set administrator username and password to access these applications. Open the `tomcat-users.xml` file in the `conf` directory.
+Next, you need to set administrator username and password to access these applications. Open the `tomcat-users.xml` file in the configuration directory for editing using `nano`.
 
 ``` bash
-sudo nano /opt/tomcat/conf/tomcat-users.xml
+sudo nano /etc/opt/tomcat/tomcat-users.xml
 ```
 
 In this file locate the line with the comment `<!-- Define users and roles here -->` and add the following lines just below it, replacing `admin` and `password` with your desired username and password.
@@ -393,7 +369,11 @@ When prompted, enter the administrator username and password you configured in t
 
 ## Install Web Adapter
 
-Procure the installation files for the ArcGIS Web Adapter for Linux from your Esri software repository or download them from the Esri website.
+Reference: [ArcGIS Web Adaptor Installation Guide](https://enterprise.arcgis.com/en/web-adaptor/latest/install/java-linux/welcome-arcgis-web-adaptor-install-guide.htm)
+
+Procure the installation files for the ArcGIS Web Adapter for Linux from the Esri software repository or download them from the Esri customer care website.
+
+### Unpack the Installer
 
 Unpack the installer tarball. This example uses the version 12.0 installer; adjust the filename as necessary for other versions.
 
@@ -401,31 +381,44 @@ Unpack the installer tarball. This example uses the version 12.0 installer; adju
 tar xvf /tmp/Web_Adapter_for_ArcGIS_Linux_*.tar.gz -C /tmp
 ```
 
-Run the setup script as the `arcgis` user.
+### Create tje Installation Directory
 
-??? note "Add `arcgis` User"
-
-    If you haven't already done so, create the `arcgis` user and group that will own and run ArcGIS Web Adapter. This example creates the `arcgis` user with a home directory of `/opt/arcgis`, so everything related to ArcGIS software is contained within the `/opt/arcgis` directory.
-
-    ``` bash
-    sudo groupadd arcgis
-    sudo useradd -g arcgis -d /opt/arcgis arcgis
-    sudo mkdir /opt/arcgis
-    sudo chown arcgis:arcgis /opt/arcgis
-    sudo chmod 755 /opt/arcgis
-    ```
-
-    Optionally, copy the bash profile to the new user's home directory.
-
-    ``` bash
-    sudo cp ~/.bashrc /opt/arcgis/.bashrc
-    sudo chown arcgis:arcgis /opt/arcgis/.bashrc
-    ```
-
-Switch to the `arcgis` user and run the Web Adapter setup script in silent mode. Using the `-v` (verbose) flag provides detailed output during the installation process, so you can monitor the installation progress.
+Create the installation directory for the ArcGIS Web Adapter.
 
 ``` bash
-sudo -u arcgis /tmp/WebAdapter/Setup -m silent -l yes -d /opt/arcgis/webadaptor -v
+sudo mkdir -p /opt/arcgis/webadaptor
+sudo chown -R tomcat:tomcat /opt/arcgis/webadaptor
+sudo chmod -R 750 /opt/arcgis/webadaptor
 ```
 
-Once installed, the web adapter can be configured to support specific ArcGIS Enterprise components (Portal for ArcGIS and ArcGIS Server) following installation and initial setup of the respective components.
+### Run the Installer
+
+Run the setup script as the `tomcat` user.
+
+!!! note "`tomcat` User"
+
+    The ArcGIS Web Adapter for Java requires a Java application server to run, and will be copied from this location to the Tomcat web applications directory. In this installation, we are using Apache Tomcat, which we have configured to run under the `tomcat` user. Therefore, we install the Web Adapter as the `tomcat` user to ensure proper permissions and integration with the Tomcat server when deploying the Web Adapter application to Tomcat.
+
+``` bash
+sudo -u tomcat /tmp/WebAdapter/Setup -m silent -l yes -d /opt/arcgis/webadaptor -v
+```
+
+Once installed, the web adapter can be configured to support specific ArcGIS Enterprise components (Portal for ArcGIS and ArcGIS Server) following installation as part of the configuration process for the necessary components.
+
+## Install Portal and Server Web Adapters (Optinal)
+
+Although we cannot configure them until the respective components are installed, we can install both the Portal for ArcGIS Web Adapter and the ArcGIS Server Web Adapter now. All we need to do is deploy the respective WAR files to the Tomcat web applications directory, and retart Tomcat.
+
+``` bash
+sudo cp /opt/arcgis/webadaptor/portal/war/arcgis.war /var/opt/tomcat/webapps/arcgis/server.war
+sudo cp /opt/arcgis/webadaptor/server/war/arcgis.war /var/opt/tomcat/webapps/arcgis/portal.war
+sudo systemctl restart tomcat
+```
+
+!!! warning "Do Not Configure Web Adapters Yet"
+
+    Do not attempt to configure the Web Adapters for Portal for ArcGIS or ArcGIS Server until those components are installed and running. The Web Adapter configuration process requires communication with the respective component, which will fail if the component is not yet installed. Attempting to configure the Web Adapters before installing Portal for ArcGIS and ArcGIS Server will result in errors and unsuccessful configuration.
+
+## Conclusion
+
+You have successfully installed and configured the ArcGIS Web Adapter on your Ubuntu system using Apache Tomcat as the application server. You can now proceed to install and configure Portal for ArcGIS and ArcGIS Server. When configuring these components, remember to configure the respective Web Adapters to ensure proper integration and functionality within your ArcGIS Enterprise deployment.

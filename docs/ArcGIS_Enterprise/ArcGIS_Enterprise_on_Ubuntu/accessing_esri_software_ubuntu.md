@@ -1,5 +1,4 @@
-# Accessing Esri Software on Ubuntu
-
+# Accessing Esri Software from Ubuntu (Internal Esri Network)
 
 ## Install CIFS Utilities
 
@@ -17,11 +16,10 @@ Create a file to store your SMB credentials securely.
 sudo nano /etc/smb-credentials-esri
 ```
 
-Put the following content in the file, replacing `USERNAME` and `YOUR_AVWORLD_PASSWORD` with your actual credentials:
+Put the following content in the file, replacing `USERNAME` with your actual credentials:
 
 ``` bash
 username=USERNAME
-password=YOUR_AVWORLD_PASSWORD
 domain=AVWORLD
 ```
 
