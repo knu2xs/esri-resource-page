@@ -5,7 +5,9 @@ References:
 - [System Requirements](https://enterprise.arcgis.com/en/web-adaptor/latest/install/java-linux/arcgis-web-adaptor-system-requirements.htm)
 - [Install ArcGIS Portal on Linux](https://enterprise.arcgis.com/en/web-adaptor/latest/install/java-linux/welcome-arcgis-web-adaptor-install-guide.htm)
 
-## Update System Packages
+## Prerequisites
+
+### Update System Packages
 
 Start by updating your package lists and upgrading existing packages to their latest versions if this has not already been done.
 
@@ -14,7 +16,7 @@ sudo apt update
 sudo apt upgrade -y
 ```
 
-## Firewall Configuration
+### Firewall Configuration
 
 Open the required firewall ports for Portal for ArcGIS.
 
@@ -22,7 +24,7 @@ Open the required firewall ports for Portal for ArcGIS.
 sudo ufw allow 7443
 ```
 
-## Service User
+### Service User
 
 If you haven't already done so, create the `arcgis` user and group that will own and run Portal for ArcGIS.
 
@@ -35,29 +37,30 @@ sudo useradd -s /bin/false -m -U arcgis
 - `-U` — Creates a group with the same name as the user
 - `arcgis` — The username
 
-## Create the Installation Directories
+### Create the Installation Directories
 
 Create the installation directory for ArcGIS Enterprise software following the [Filesystem Hierarchy Standard](https://refspecs.linuxbase.org/FHS_3.0/fhs-3.0.html#optOptionalApplicationSoftwarePackages) and set ownership and permissions for the `arcgis` user.
 
 Based on FHS, application software should be installed in `/opt`, variable data in `/var/opt`, and configuration files in `/etc/opt`. Following this standard, the directories for Portal will be the following:
 
-- `/opt/arcgis` — Application binaries (read-only)
-- `/var/opt/arcgis` — Variable data
-- `/etc/opt/arcgis` — Configuration files (read-only for non-root users in the `arcgis` group)
+- `/opt/arcgis/portal` — Application binaries (read-only)
+- `/var/opt/arcgis/portal` — Variable data
+- `/var/opt/arcgis/portal/content` — Content directory for Portal data
+- `/etc/opt/arcgis/portal` — Configuration files (read-only for non-root users in the `arcgis` group)
 
 ``` bash
-sudo mkdir -p /opt/arcgis
-sudo chown arcgis:arcgis /opt/arcgis
-sudo chmod 750 /opt/arcgis
-sudo mkdir -p /var/opt/arcgis
+sudo mkdir -p /opt/arcgis/portal
+sudo chown arcgis:arcgis /opt/arcgis/portal
+sudo chmod 750 /opt/arcgis/portal
+sudo mkdir -p /var/opt/arcgis/portal/content
 sudo chown arcgis:arcgis /var/opt/arcgis
 sudo chmod 750 /var/opt/arcgis
-sudo mkdir -p /etc/opt/arcgis
+sudo mkdir -p /etc/opt/arcgis/portal
 sudo chown root:arcgis /etc/opt/arcgis
 sudo chmod 750 /etc/opt/arcgis
 ```
 
-### Extend the Volumes (if necessary)
+#### Extend the Volumes (if necessary)
 
 Check to ensure there is enogh space on the `/opt` volume to install Portal for ArcGIS. If there is not enough space, extend the logical volume and resize the filesystem.
 
@@ -70,7 +73,7 @@ df -h /opt
 There needs to be at least 20 GB of free space to install Portal for ArcGIS. If there is not enough space, extend the logical volume. When installing, I discovered only 20GB is allocated by default, so I extended it by an additional 10GB to have enough capacity.
 
 ``` bash
-sudo lvextend -L +10G /dev/vg_os/lv_opt --resizefs
+sudo lvextend -L +10G /opt --resizefs
 ```
 
 Since we are going to be using the `/var` volume for Portal data, also check the available space on the `/var` volume.
@@ -82,10 +85,10 @@ df -h /var
 There should to be at least 50 GB of free space on the `/var` volume to accommodate Portal data. If there is not enough space, extend the logical volume and resize the filesystem.
 
 ``` bash
-sudo lvextend -L +20G /dev/vg_os/lv_var --resizefs
+sudo lvextend -L +20G /var --resizefs
 ```
 
-## Set File Handle Limits
+### Set File Handle Limits
 
 Set the file handle limits for the `arcgis` user to ensure Portal for ArcGIS can handle multiple concurrent connections, REST API requests, and caching operations. Create a dedicated configuration file in `/etc/security/limits.d/` to set these limits:
 
@@ -106,9 +109,11 @@ arcgis           soft    nofile          65536
 arcgis           hard    nofile          unlimited
 ```
 
-## Copy and Unpack the Installer
+## Install Portal for ArcGIS
 
-Copy the Portal for ArcGIS installer from the mounted Esri software share to `/tmp`, and unpack it.
+### Copy and Unpack the Installer
+
+Copy the Portal for ArcGIS installer to `/tmp`, and unpack it.
 
 ``` bash
 cp /mnt/software/120_Final/Portal_for_ArcGIS_Linux_*.tar.gz /tmp
@@ -120,7 +125,7 @@ Unpack the installer tarball.
 tar xvf /tmp/Portal_for_ArcGIS_Linux_*.tar.gz -C /tmp
 ```
 
-## Install Portal for ArcGIS
+### Install Portal for ArcGIS
 
 Run the Portal for ArcGIS installer as the `arcgis` user. Use `sudo -u arcgis` to run the command as the `arcgis` user without changing the shell:
 
@@ -134,21 +139,7 @@ sudo -u arcgis /tmp/PortalforArcGIS/Setup -m silent -l yes -d /opt/arcgis/portal
 - `-d /opt/arcgis/portal` — Specifies the installation directory
 - `-v` — Enables verbose output
 
-## Create Portal for ArcGIS Data Directory
-
-Following the [Filesystem Hierarchy Standard](https://refspecs.linuxbase.org/FHS_3.0/fhs-3.0.html#varoptVariableDataForOpt), variable data such as logs, caches, and content for Portal for ArcGIS are stored in `/var/opt/arcgis/portal`. Create the directory and set the appropriate ownership and permissions:
-
-``` bash
-sudo mkdir -p /var/opt/arcgis/portal
-sudo chown -R arcgis:arcgis /var/opt/arcgis
-sudo chmod -R 755 /var/opt/arcgis
-```
-
-- `mkdir -p` — Creates the directory and any necessary parent directories
-- `chown -R arcgis:arcgis` — Recursively sets the owner and group to `arcgis`
-- `chmod -R 755` — Recursively sets permissions (owner: read/write/execute, group and others: read/execute)
-
-## Service Configuration
+### Service Configuration
 
 Configure the Portal for ArcGIS service to start automatically when the system boots using `systemd`.
 
@@ -194,11 +185,11 @@ sudo systemctl status arcgisportal.service --no-pager
 
 The status will either be `active (running)` if everything is functioning properly, or `failed` if there are issues that need to be addressed.
 
-## Create a Portal for ArcGIS Site
+## Create the Portal for ArcGIS Site
 
 This has to be done through the Portal for ArcGIS web interface. There is not a scrip to perform this stop. 
 
-Open a web browser and navigate to `https://<portal_hostname>:7443/portal/webadaptor`. Follow the prompts to create the initial site, specifying the data directory created in the previous step, making the content directory `/var/opt/arcgis/portal/content`, and setting the initial administrator account.
+Open a web browser and navigate to `https://<portal_hostname>:7443/portal/webadaptor`. Follow the prompts to create the initial site, making the content directory `/var/opt/arcgis/portal/content`, and setting credentials for the initial administrator account.
 
 ## Configure Portal for ArcGIS Web Adaptor
 
