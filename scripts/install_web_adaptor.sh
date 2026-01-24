@@ -329,7 +329,10 @@ install_web_adaptor() {
     
     # Run the installer as tomcat user
     sudo -u ${TOMCAT_USER} /tmp/WebAdapter/Setup -m silent -l yes -d /opt -v
-    
+
+    # reanme the installed directory to /opt/arcgis/webadaptor
+    sudo -u ${TOMCAT_USER} mv /opt/WebAdaptor*/ /opt/arcgis/webadaptor
+
     # Cleanup
     rm -rf /tmp/WebAdapter
 }

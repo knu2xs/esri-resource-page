@@ -407,9 +407,15 @@ Run the setup script as the `tomcat` user.
 sudo -u tomcat /tmp/WebAdapter/Setup -m silent -l yes -d /opt -v
 ```
 
+The installer places the Web Adapter files in `/opt/arcgis/WebAdaptor12.0` (for version 12.0). To make the installation directory consistent with our directory structure, rename it to `/opt/arcgis/webadaptor`.
+
+``` bash
+sudo -u tomcat mv /opt/WebAdaptor*/ /opt/arcgis/webadaptor
+```
+
 Once installed, the web adapter can be configured to support specific ArcGIS Enterprise components (Portal for ArcGIS and ArcGIS Server) following installation as part of the configuration process for the necessary components.
 
-## Install Portal and Server Web Adapters (Optional)
+## Install Portal and Server Web Adapters
 
 Although we cannot configure them until the respective components are installed, we can install both the Portal for ArcGIS Web Adapter and the ArcGIS Server Web Adapter now. All we need to do is deploy the respective WAR files to the Tomcat web applications directory, and retart Tomcat.
 
