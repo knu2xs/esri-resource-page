@@ -25,6 +25,10 @@
 - [Esri Asset Share](https://esri.brand-portal.adobe.com/) (Brand > Emblems and Logos > Search for `.png`)
 - Business Analyst Content Deliveries on Redstorage1
 
+## ArcGIS Online Resources
+
+- [Vector Basemap Layers](https://adventure.maps.arcgis.com/home/group.html?sortField=title&sortOrder=asc&focus=layers&id=30de8da907d240a0bccd5ad3ff25ef4a#content)
+
 ```
 \\redstorage1\ba-data-content-deliveries
 ```
