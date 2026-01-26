@@ -27,14 +27,16 @@ brew install xcode-build-server
 Install the following extensions in Visual Studio Code:
 
 1. **Swift Extension** (official)
-   - Extension ID: `sde.languageserver.swift`
-   - Open VS Code and go to Extensions (`Cmd + Shift + X`)
-   - Search for "Swift" and install the official extension from the Swift community
+
+    - Extension ID: `sde.languageserver.swift`
+    - Open VS Code and go to Extensions (`Cmd + Shift + X`)
+    - Search for "Swift" and install the official extension from the Swift community
 
 2. **Sweetpad Extension**
-   - Extension ID: `Sweetpad.sweetpad`
-   - Provides iOS-specific development features (build, run, debug)
-   - Documentation: [https://sweetpad.hyzyla.dev/](https://sweetpad.hyzyla.dev/)
+
+    - Extension ID: `Sweetpad.sweetpad`
+    - Provides iOS-specific development features (build, run, debug)
+    - Documentation: [https://sweetpad.hyzyla.dev/](https://sweetpad.hyzyla.dev/)
 
 ### Step 3: Verify Installation
 
@@ -237,7 +239,7 @@ This creates `ArcGISMapApp.xcodeproj` from your `project.yml` configuration.
 code .
 ```
 
-Now continue with "Step 3: Configure VS Code for the Project" below.
+Now continue with [Step 3: Configure VS Code for the Project](#step-3-configure-vs-code-for-the-project) below.
 
 ### Step 2: Add ArcGIS Swift SDK Dependency
 
