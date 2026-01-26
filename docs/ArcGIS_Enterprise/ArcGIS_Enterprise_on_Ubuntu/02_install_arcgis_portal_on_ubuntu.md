@@ -205,6 +205,80 @@ Since there is no GUI on the Linux server, use the command line interface to con
 /opt/arcgis/webadaptor12.0/java/tools/configurewebadaptor.sh -m portal -w https://<webserver.domain.com>/portal/webadaptor -g portalserver.domain.com -u portaladmin -p P@ssw0rd
 ```
 
-## Verify the Installation
+## Create Portal Site
 
-Now, you are ready to access the Portal for ArcGIS site. Open a web browser and navigate to `https://<webserver.domain.com>/portal`. Log in using the administrator account you created earlier in the Portal for ArcGIS site creation step to verify that the installation was successful.
+Next, we need to create the ArcGIS Portal site using the command line interface.
+
+??? tip "User Type IDs"
+
+    The following user type IDs are available in Portal for ArcGIS if available in your license, and can be used for the `-ut` parameter when creating the portal site:
+
+    | User Type | ID |
+    |-----------|----|
+    | Viewer | viewerUT |
+    | Data Editor | dataEditorUT |
+    | Creator | creatorUT |
+    | GIS Professional | gisProfessionalUT |
+    | Publisher | publisherUT |
+    | Administrator | administratorUT |
+
+    Getting user types available in your license can be determined by running the following command:
+
+    ``` bash
+    /opt/arcgis/portal/tools/listusertypes.sh
+    ```
+
+ Run the following command on the Portal server, replacing the placeholders with your actual values. The content directory is set to `/var/opt/arcgis/portal/content` based on the best practices for where the content directory should be located, in `/var/opt` since containing variable data for optional software.
+
+``` bash
+/opt/arcgis/portal/tools/createportalsite.sh \
+    -fn Admin \
+    -ln Hefe \
+    -u portaladmin \
+    -p P@ssw0rd \
+    -e nobody@nowhere.com \
+    -qi 1 \
+    -qa Metropolis \
+    -d /var/opt/arcgis/portal/content \
+    -lf /tmp/*.ecp \
+    -ut creatorUT \
+```
+
+!!! note "Create Site Parameters"
+
+    Parameters for the `createportalsite.sh` script:
+
+    | Parameter | Description |
+    |-----------|-------------|
+    | `-fn`, `--firstname <arg>` | The first name for an account with administrative privileges using which you want to configure the portal. |
+    | `-ln`, `--lastname <arg>` | The last name for an account with administrative privileges using which you want to configure the portal. |
+    | `-u`, `--username <arg>` | The user name of an account with administrative rights to the portal. Normally, you will use the primary portal administrator account for creating the portal. |
+    | `-p`, `--password <arg>` | The password of the account you specified for the username parameter. Normally, you will use the primary portal administrator account for creating the portal. |
+    | `-e`, `--email <arg>` | The email for an account with administrative privileges using which you want to configure the portal. |
+    | `-qi`, `--questionIndex <arg>` | The index of the secret question to retrieve a forgotten password. See below for the list of questions. |
+    | `-qa`, `--answer <arg>` | The answer to the secret question that you chose for the parameter `qi`. |
+    | `-d`, `--contentDirectory <arg>` | The absolute path and the name of the Content Directory for storing data hosted on portal. By default, the portal content directory will be created locally. |
+    | `-lf`, `--licenseFile <arg>` | The path to the portal license file. |
+    | `-ut`, `--userTypeId <arg>` | The id of the user type for the Initial Administrator. |
+    | `-f`, `--file <FILE>` | The properties file for the createportal utility. By default, the `createportal.properties` file can be found at `/<ArcGIS Server installation directory>/tools/createportal`. |
+    | `-h`, `--help` | Display this tool help message and exit. |
+
+    **Secret Question Index Values:**
+
+    | Index | Question |
+    |-------|----------|
+    | 1 | What city were you born in? |
+    | 2 | What was your high school mascot? |
+    | 3 | What is your mother's maiden name? |
+    | 4 | What was the make of your first car? |
+    | 5 | What high school did you go to? |
+    | 6 | What is the last name of your best friend? |
+    | 7 | What is the middle name of your youngest sibling? |
+    | 8 | What is the name of the street on which you grew up? |
+    | 9 | What is the name of your favorite fictional character? |
+    | 10 | What is the name of your favorite pet? |
+    | 11 | What is the name of your favorite restaurant? |
+    | 12 | What is the title of your favorite book? |
+    | 13 | What is your dream job? |
+    | 14 | Where did you go on your first date? |
+
