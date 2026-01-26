@@ -123,6 +123,7 @@ targets:
         CFBundleVersion: "1"
         UILaunchScreen: {}
         ArcGISMapItemID: "41281c51f9de45edaf1c8ed44bb10e30"
+        ArcGISAPIKey: "YOUR-API-KEY-HERE"
         NSLocationWhenInUseUsageDescription: "We need your location to show you on the map"
 ```
 
@@ -144,8 +145,11 @@ import ArcGIS
 @main
 struct ArcGISMapAppApp: App {
     init() {
-        // Configure ArcGIS API key if needed
-        // ArcGISEnvironment.apiKey = APIKey("YOUR-API-KEY")
+        // Configure ArcGIS API key from Info.plist
+        if let apiKey = Bundle.main.object(forInfoDictionaryKey: "ArcGISAPIKey") as? String,
+           !apiKey.isEmpty && apiKey != "YOUR-API-KEY-HERE" {
+            ArcGISEnvironment.apiKey = APIKey(apiKey)
+        }
     }
     
     var body: some Scene {
@@ -334,21 +338,33 @@ This creates a `buildServer.json` file in your project root.
 
 ## Part 3: Build a Simple Map Application
 
-### Step 1: Configure Info.plist for Map ID
+### Step 1: Configure Info.plist for Map ID and API Key
 
 1. Open `ArcGISMapApp/Info.plist` (or create it if it doesn't exist)
 
-2. Add a custom key for the map ID:
+2. Add custom keys for the map ID and API key:
    ```xml
    <key>ArcGISMapItemID</key>
-   <string>your-map-id-here</string>
+   <string>41281c51f9de45edaf1c8ed44bb10e30</string>
+   <key>ArcGISAPIKey</key>
+   <string>YOUR-API-KEY-HERE</string>
    ```
 
-   Replace `your-map-id-here` with an actual ArcGIS Online map ID. For example:
-   - Use `41281c51f9de45edaf1c8ed44bb10e30` for a basic topographic map
+   **Map ID Configuration:**
+   - Replace the map ID value with an actual ArcGIS Online map ID
+   - Example IDs:
+     - `41281c51f9de45edaf1c8ed44bb10e30` - Topographic
+     - `d5e02a0c1f2b4ec399823fdd3c2fdebd` - Streets
+     - `7dc6cea0b1764a1f9af2e679f642f0f5` - Imagery
    - Or create your own map at [https://www.arcgis.com](https://www.arcgis.com)
 
-3. To support location services (optional), add these keys:
+   **API Key Configuration:**
+   - Get an API key from [https://developers.arcgis.com](https://developers.arcgis.com)
+   - Replace `YOUR-API-KEY-HERE` with your actual API key
+   - For development/testing with **public maps only**, you can leave this as-is or use an empty string
+   - For production apps or accessing secured services, a valid API key is required
+
+3. To support location services (optional), add this key:
    ```xml
    <key>NSLocationWhenInUseUsageDescription</key>
    <string>We need your location to show you on the map</string>
@@ -431,8 +447,11 @@ import ArcGIS
 @main
 struct ArcGISMapAppApp: App {
     init() {
-        // Configure ArcGIS API key if needed
-        // ArcGISEnvironment.apiKey = APIKey("YOUR-API-KEY")
+        // Configure ArcGIS API key from Info.plist
+        if let apiKey = Bundle.main.object(forInfoDictionaryKey: "ArcGISAPIKey") as? String,
+           !apiKey.isEmpty && apiKey != "YOUR-API-KEY-HERE" {
+            ArcGISEnvironment.apiKey = APIKey(apiKey)
+        }
     }
     
     var body: some Scene {
@@ -443,9 +462,11 @@ struct ArcGISMapAppApp: App {
 }
 ```
 
-**Note**: For development and testing with public maps, you don't need an API key. For production apps or accessing secured services, you'll need to:
-1. Get an API key from [https://developers.arcgis.com](https://developers.arcgis.com)
-2. Uncomment and add your key in the `init()` method
+**How this works:**
+- The app reads the `ArcGISAPIKey` value from `Info.plist` at launch
+- If a valid API key is found (not empty or placeholder), it configures the ArcGIS environment
+- For development with public maps, you can skip configuring an API key
+- For production or secured services, add your API key to the plist file
 
 ### Step 4: Build and Run the Application
 
@@ -479,18 +500,24 @@ xcrun simctl install booted path/to/ArcGISMapApp.app
 xcrun simctl launch booted com.yourname.ArcGISMapApp
 ```
 
-### Step 5: Changing the Map
+### Step 5: Changing the Map or API Key
 
-To use a different map, simply update the `ArcGISMapItemID` value in `Info.plist`:
+To use a different map or update your API key, simply modify the values in `Info.plist`:
 
 1. Open `Info.plist`
-2. Change the map ID value to another ArcGIS Online map ID
-3. Rebuild and run the app
+2. **To change the map**: Update the `ArcGISMapItemID` value to another ArcGIS Online map ID
+3. **To add/update API key**: Update the `ArcGISAPIKey` value with your API key
+4. Rebuild and run the app
 
 Example map IDs to try:
 - `41281c51f9de45edaf1c8ed44bb10e30` - Topographic
 - `d5e02a0c1f2b4ec399823fdd3c2fdebd` - Streets
 - `7dc6cea0b1764a1f9af2e679f642f0f5` - Imagery
+
+**Note**: Keeping configuration values in `Info.plist` makes it easy to change settings without modifying code, which is especially useful for:
+- Switching between development and production API keys
+- Testing different maps
+- Managing app configurations across different environments
 
 ## Debugging and Development
 
@@ -536,8 +563,8 @@ Example map IDs to try:
 
 ## Next Steps
 
-- Add location tracking to show user position on the map
-- Implement map interactions (zoom, pan, tap to identify)
-- Add search functionality
-- Display custom graphics and symbols on the map
-- Integrate with ArcGIS services (geocoding, routing, etc.)
+- **Add location tracking to show user position on the map** - [Location and sensors tutorial](https://developers.arcgis.com/swift/device-location/)
+- **Implement map interactions (zoom, pan, tap to identify)** - [Identify features tutorial](https://developers.arcgis.com/swift/identify-features/) and [Display map viewpoint](https://developers.arcgis.com/swift/display-map/)
+- **Add search functionality** - [Search for an address or place tutorial](https://developers.arcgis.com/swift/search-for-an-address/)
+- **Display custom graphics and symbols on the map** - [Display graphics tutorial](https://developers.arcgis.com/swift/add-a-point-line-and-polygon/)
+- **Integrate with ArcGIS services** - [Geocoding tutorial](https://developers.arcgis.com/swift/search-for-an-address/), [Routing tutorial](https://developers.arcgis.com/swift/find-a-route/), and [Network analysis](https://developers.arcgis.com/swift/network-analysis/)
