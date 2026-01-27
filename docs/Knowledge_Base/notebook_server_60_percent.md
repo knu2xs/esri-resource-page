@@ -1,15 +1,63 @@
+---
+tags:
+  - ArcGIS Notebook Server
+  - Docker
+  - Windows Firewall
+  - Windows Server
+  - Troubleshooting
+  - NAT Network
+  - CIS Benchmark
+  - Group Policy
+  - GPO
+  - Firewall Rules
+  - Jupyter
+  - Enterprise
+  - Infrastructure
+  - Security
+categories:
+  - Knowledge Base
+  - Troubleshooting
+keywords:
+  - notebook server
+  - docker nat
+  - windows firewall
+  - cis benchmark
+  - gpo firewall rules
+  - jupyter connectivity
+  - port 8888
+  - docker containers
+  - public profile
+  - network isolation
+---
+
 # Troubleshooting Windows Firewall + Docker NAT Issues on ArcGIS Notebook Server
 
-**Last Updated:** January 2026  
+**Last Updated:** 27 Jan 2026  
 **Author:** Joel McCune, Sr. Technical Consultant
 
 ***
 
 ## Overview
 
-When running **ArcGIS Notebook Server** on Windows Server (2022+), Docker containers may start successfully, yet the Notebook Server cannot reach the Jupyter service inside the container (default port **8888**).
+When running **ArcGIS Notebook Server** on Windows Server (2022+), Docker containers may start successfully, yet the Notebook Server cannot reach the Jupyter service inside the container (default port **8888**). 
+
+When launching, the Notebook Server UI will hang at **60%** progress, and eventually time out. The Notebook Server logs may show repeated connection failures, with a message similar to the following.
+
+```
+ArcGIS Notebook Server is not yet ready to receive requests for
+https://127.0.0.1:30003/nb/notebooks/41aa784e7be84e1a8e060bc2b09033fd/api/sessions/.
+
+Retrying...
+``` 
+!!! info
+
+    This is a `FINE` level log message indicating that the Notebook Server cannot connect to the Jupyter service inside the Docker container, and will be repeated in the logs. Hence, to determine if this is the issue, you need to enable `FINE` (or `DEBUG`) logging for the Notebook Server.
 
 A common root cause is that Docker’s **NAT network adapter** is assigned to the **Public firewall profile**, and the organization applies **CIS Benchmark policies** that cause the Public profile to **ignore locally created firewall rules**. When this happens, manually created firewall rules **never take effect**, and connectivity fails until a **GPO‑delivered allow rule** is deployed.
+
+!!! tip
+
+    A clear test is to temporarily disable the Public firewall profile. If connectivity is restored, if you are able to successfully launch a Notebook, you have confirmed that the Public profile is blocking required traffic.
 
 This KB provides a repeatable diagnostic and remediation workflow.
 
@@ -28,7 +76,9 @@ For Windows Server, CIS Benchmarks often enforce:
 *   Highly restrictive inbound policy defaults
 *   Alignment with NIST, ISO 27001, and Zero Trust frameworks
 
-If your organization implements CIS Level 1 or Level 2 benchmarks, local firewall rules may not apply, and only GPO-sourced rules will be honored.
+!!! info
+
+    If your organization implements **CIS Level 1** or **CIS Level 2** benchmarks, local firewall rules may not apply, and **only GPO-sourced rules will be honored**.
 
 ***
 
@@ -137,8 +187,7 @@ Re-check the active firewall profile after making the change.
 Set-NetFirewallProfile -Profile Public -Enabled False
 ```
 
-If everything works immediately, you have confirmed that the Public profile was blocking required traffic.  
-**Do not** use this as a permanent solution.
+If everything works immediately, you have confirmed that the Public profile was blocking required traffic. 
 
 ***
 

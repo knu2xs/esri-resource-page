@@ -1,3 +1,31 @@
+---
+tags:
+  - ArcGIS Notebook Server
+  - Docker
+  - Container Images
+  - Custom Runtime
+  - Conda
+  - Jupyter
+  - Enterprise
+  - Python
+  - Package Management
+  - Dockerfile
+categories:
+  - ArcGIS Enterprise Installation
+  - Configuration
+keywords:
+  - custom notebook image
+  - docker build
+  - conda install
+  - jupyter notebook
+  - arcgispro-py3
+  - container runtime
+  - dockerfile
+  - docker images
+  - package dependencies
+  - geopandas
+---
+
 # Create Custom Notebook Container Image
 
 Reference: [Build a custom container image](https://enterprise.arcgis.com/en/notebook/latest/install/windows/extend-a-notebook-runtime.htm#ESRI_SECTION1_027D1A1826A242B3BEB7F9A0166DEEEF)

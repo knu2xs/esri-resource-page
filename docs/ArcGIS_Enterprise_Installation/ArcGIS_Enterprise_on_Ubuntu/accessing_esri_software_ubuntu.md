@@ -1,34 +1,47 @@
 # Accessing Esri Software from Ubuntu (Internal Esri Network)
 
-## Install CIFS Utilities
+## Install Required Packages
 
-Install the CIFS utilities package to enable mounting SMB/CIFS shares.
+Install CIFS utilities and Kerberos packages to enable secure mounting of SMB/CIFS shares using Active Directory authentication.
 
 ``` bash
-sudo apt install cifs-utils -y
+sudo apt install cifs-utils krb5-user keyutils -y
 ```
 
-## Create Credentials File
+During the Kerberos installation, you will be prompted to configure the realm:
 
-Create a file to store your SMB credentials securely.
+- **Default Kerberos realm**: `AVWORLD.ESRI.COM`
+- **Kerberos servers for realm**: `AVWORLD.ESRI.COM`
+- **Administrative server for realm**: `AVWORLD.ESRI.COM`
+
+## Configure Kerberos (if needed)
+
+If you need to manually configure Kerberos after installation, edit the configuration file:
 
 ``` bash
-sudo nano /etc/smb-credentials-esri
+sudo nano /etc/krb5.conf
 ```
 
-Put the following content in the file, replacing `USERNAME` with your actual credentials:
+Ensure it includes the following configuration:
 
-``` bash
-username=USERNAME
-domain=AVWORLD
-```
+``` ini
+[libdefaults]
+    default_realm = AVWORLD.ESRI.COM
+    dns_lookup_realm = false
+    dns_lookup_kdc = false
+    ticket_lifetime = 24h
+    renew_lifetime = 7d
+    forwardable = true
 
-## Restrict Credentials File Permissions
+[realms]
+    AVWORLD.ESRI.COM = {
+        kdc = AVWORLD.ESRI.COM
+        admin_server = AVWORLD.ESRI.COM
+    }
 
-Set the permissions on the credentials file to ensure that only the root user can read it.
-
-``` bash
-sudo chmod 600 /etc/smb-credentials-esri
+[domain_realm]
+    .esri.com = AVWORLD.ESRI.COM
+    esri.com = AVWORLD.ESRI.COM
 ```
 
 ## Create Mount Point
@@ -36,29 +49,105 @@ sudo chmod 600 /etc/smb-credentials-esri
 Create a directory where the network share will be mounted.
 
 ``` bash
-sudo mkdir /mnt/software
+sudo mkdir -p /mnt/software
 ```
 
-## Mount Using CIFS
+## Obtain Kerberos Ticket
 
-Mount the Esri software share using the CIFS protocol.
+Get a Kerberos ticket for your user (replace `USERNAME` with your Esri username):
 
 ``` bash
-sudo mount -t cifs -o credentials=/etc/smb-credentials-esri,vers=2.0 //red-inf-dct-p01.esri.com/software/Esri/Released /mnt/software
+kinit USERNAME@AVWORLD.ESRI.COM
 ```
 
-## Persistence Across Reboots (Optional)
+You will be prompted for your password. Verify the ticket:
 
-To make the mount persistent across reboots, add an entry to the `/etc/fstab` file.
+``` bash
+klist
+```
+
+## Mount Using Kerberos Authentication
+
+Mount the Esri software share using Kerberos authentication (no password storage required):
+
+``` bash
+sudo mount -t cifs -o sec=krb5,vers=3.0,multiuser //red-inf-dct-p01.esri.com/software/Esri/Released /mnt/software
+```
+
+## Automatic Mount on Boot
+
+To make the mount persistent across reboots with Kerberos authentication, add an entry to `/etc/fstab`:
 
 ``` bash
 sudo nano /etc/fstab
 ```
 
-Add the following line to the end of the file:
+Add the following line:
 
 ``` bash
-//red-inf-dct-p01.esri.com/software/Esri/Released /mnt/software cifs credentials=/etc/smb-credentials-esri,vers=2.0
+//red-inf-dct-p01.esri.com/software/Esri/Released /mnt/software cifs sec=krb5,vers=3.0,multiuser,_netdev 0 0
 ```
 
-Save and close the file. The next time you reboot your system, the share will be mounted automatically.
+The `_netdev` option ensures the mount waits for network availability before attempting to mount.
+
+## Automatic Kerberos Ticket Renewal
+
+To automatically renew your Kerberos ticket and keep the mount accessible, create a systemd service:
+
+``` bash
+sudo nano /etc/systemd/system/kerberos-renew.service
+```
+
+Add the following content (replace `USERNAME` with your Esri username):
+
+``` ini
+[Unit]
+Description=Kerberos Ticket Renewal
+After=network-online.target
+
+[Service]
+Type=simple
+User=USERNAME
+ExecStart=/usr/bin/kinit -R
+Restart=on-failure
+RestartSec=3600
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Create a timer to run the renewal:
+
+``` bash
+sudo nano /etc/systemd/system/kerberos-renew.timer
+```
+
+Add the following:
+
+``` ini
+[Unit]
+Description=Kerberos Ticket Renewal Timer
+
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=6h
+
+[Install]
+WantedBy=timers.target
+```
+
+Enable and start the timer:
+
+``` bash
+sudo systemctl enable kerberos-renew.timer
+sudo systemctl start kerberos-renew.timer
+```
+
+## Verification
+
+After reboot, verify the mount is working:
+
+``` bash
+df -h | grep software
+ls /mnt/software
+```
