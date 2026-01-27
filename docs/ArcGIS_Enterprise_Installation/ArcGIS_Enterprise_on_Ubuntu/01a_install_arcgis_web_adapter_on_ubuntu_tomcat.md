@@ -1,4 +1,4 @@
-# Install ArcGIS Web Adapter on Ubuntu
+# Install ArcGIS Web Adapter on Ubuntu with Tomcat
 
 Reference: [System Requirements](https://enterprise.arcgis.com/en/web-adaptor/latest/install/java-linux/arcgis-web-adaptor-system-requirements.htm)
 

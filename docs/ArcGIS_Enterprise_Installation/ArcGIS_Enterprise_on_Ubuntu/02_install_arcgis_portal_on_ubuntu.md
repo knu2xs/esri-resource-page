@@ -185,29 +185,51 @@ sudo systemctl status arcgisportal.service --no-pager
 
 The status will either be `active (running)` if everything is functioning properly, or `failed` if there are issues that need to be addressed.
 
-## Create the Portal for ArcGIS Site
+## Move Log Files to `var/opt/arcgis/portal/logs`
 
-This has to be done through the Portal for ArcGIS web interface. There is not a scrip to perform this stop. 
+By default, Portal for ArcGIS stores its log files in the installation directory under `/opt/arcgis/portal/logs`. To follow best practices and keep variable data in `/var/opt`, we will move the log files to `/var/opt/arcgis/portal/logs` and create a symbolic link.
 
-Open a web browser and navigate to `https://<portal_hostname>:7443/portal/webadaptor`. Follow the prompts to create the initial site, making the content directory `/var/opt/arcgis/portal/content`, and setting credentials for the initial administrator account.
-
-## Configure Portal for ArcGIS Web Adaptor
-
-Web Adapter configuration must be done on the web server where the web adaptor is installed. The following steps shall be performed on the web server where the ArcGIS Web Adaptor is installed.
-
-!!! warning "Ensure Portal Web Adaptor is Installed"
-
-    If you have not already done so, install the ArcGIS Web Adaptor following the instructions in the [Install ArcGIS Web Adaptor on Ubuntu](01_install_arcgis_web_adapter_on_ubuntu.md) guide and deploy the WAR file for Portal (`portal.war`).
-
-Since there is no GUI on the Linux server, use the command line interface to configure the web adaptor. Run the following command on the web server where the ArcGIS Web Adaptor is installed, replacing the placeholders with your actual values.
+First, stop the Portal for ArcGIS service.
 
 ``` bash
-/opt/arcgis/webadaptor12.0/java/tools/configurewebadaptor.sh -m portal -w https://<webserver.domain.com>/portal/webadaptor -g portalserver.domain.com -u portaladmin -p P@ssw0rd
+sudo systemctl stop arcgisportal.service
+```
+
+Create the new logs directory in `/var/opt`.
+
+``` bash
+sudo mkdir -p /var/opt/arcgis/portal/logs
+sudo chown -R arcgis:arcgis /var/opt/arcgis/portal/logs
+sudo chmod 750 /var/opt/arcgis/portal/logs
+```
+
+Start the Portal for ArcGIS service again.
+
+
+``` bash
+sudo systemctl start arcgisportal.service
+```
+
+Use the REST API to update the log location in Portal for ArcGIS. Run the following command, replacing the placeholders with your actual values.
+
+``` bash
+sudo -u arcgis /opt/arcgis/portal/tools/portaladmin.sh updateportalproperties --properties logDir=/var/opt/arcgis/portal/logs --username portaladmin --password P@ssw0rd
+```
+
+Move the existing log files to the new location, ensure permissions are correctly set and remove the old logs directory.
+
+``` bash
+sudo mv /opt/arcgis/portal/logs/* /var/opt/arcgis/portal/logs/
+sudo chown -R arcgis:arcgis /var/opt/arcgis/portal/logs
+sudo chmod -R 750 /var/opt/arcgis/portal/logs
+sudo rmdir /opt/arcgis/portal/logs
 ```
 
 ## Create Portal Site
 
-Next, we need to create the ArcGIS Portal site using the command line interface.
+Next, we need to create the ArcGIS Portal site. This can be done using the command line interface or through the web interface.
+
+### Create Portal Site Using Command Line
 
 ??? tip "User Type IDs"
 
@@ -282,3 +304,29 @@ Next, we need to create the ArcGIS Portal site using the command line interface.
     | 13 | What is your dream job? |
     | 14 | Where did you go on your first date? |
 
+### Create Portal Site Using Web Interface
+
+Open a web browser and navigate to `https://<portal_hostname>:7443/portal/webadaptor`. Follow the prompts to create the initial site, making the content directory `/var/opt/arcgis/portal/content`, and setting credentials for the initial administrator account.
+
+## Configure Portal for ArcGIS Web Adaptor
+
+Web Adapter configuration must be done on the web server where the web adaptor is installed. The following steps shall be performed on the web server where the ArcGIS Web Adaptor is installed.
+
+!!! warning "Ensure Portal Web Adaptor is Installed"
+
+    If you have not already done so, install the ArcGIS Web Adaptor following the instructions in the [Install ArcGIS Web Adaptor on Ubuntu](01_install_arcgis_web_adapter_on_ubuntu.md) guide and deploy the WAR file for Portal (`portal.war`).
+
+Since there is no GUI on the Linux server, use the command line interface to configure the web adaptor. Run the following command on the web server where the ArcGIS Web Adaptor is installed, replacing the placeholders with your actual values.
+
+``` bash
+/opt/arcgis/webadaptor12.0/java/tools/configurewebadaptor.sh -m portal -w https://<webserver.domain.com>/portal/webadaptor -g portalserver.domain.com -u portaladmin -p P@ssw0rd
+```
+
+## Verify Portal for ArcGIS is Functioning Properly
+
+Open a web browser and navigate to `https://<portalserver.domain.com>/portal/home`. Log in using the administrator credentials created when setting up the portal site. Verify that you can access the portal home page and that all functionalities are working as expected.
+You can also check the status of the Portal for ArcGIS service to ensure it is running correctly:
+
+``` bash
+sudo systemctl status arcgisportal.service --no-pager
+```
