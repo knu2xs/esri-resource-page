@@ -1,177 +1,219 @@
-# KB: Troubleshooting Windows Firewall + Docker NAT Issues on ArcGIS Notebook Server
+# Troubleshooting Windows Firewall + Docker NAT Issues on ArcGIS Notebook Server
 
 **Last Updated:** January 2026  
 **Author:** Joel McCune, Sr. Technical Consultant
 
 ***
 
-## **Overview**
+## Overview
 
-When running **ArcGIS Notebook Server** on Windows Server (2022+), Docker containers may start successfully, but Notebook Server cannot connect to the Jupyter port (typically **8888**) inside the container.  
-A common root cause is that Docker’s **NAT network adapter** is assigned to the **Public** firewall profile, which—under CIS or similar hardened baselines—may be configured to **ignore local firewall rules**, meaning any rules you create manually will not apply.
+When running **ArcGIS Notebook Server** on Windows Server (2022+), Docker containers may start successfully, yet the Notebook Server cannot reach the Jupyter service inside the container (default port **8888**).
 
-This KB provides a repeatable diagnostic and remediation procedure.
+A common root cause is that Docker’s **NAT network adapter** is assigned to the **Public firewall profile**, and the organization applies **CIS Benchmark policies** that cause the Public profile to **ignore locally created firewall rules**. When this happens, manually created firewall rules **never take effect**, and connectivity fails until a **GPO‑delivered allow rule** is deployed.
+
+This KB provides a repeatable diagnostic and remediation workflow.
 
 ***
 
-## **1. Determine the Active Windows Firewall Profile**
+## What CIS Benchmarks Are
 
-Windows may incorrectly classify the Docker NAT adapter under the **Public** profile. Confirm which profile is currently active:
+The **Center for Internet Security (CIS)** publishes widely adopted **security baselines** for operating systems and applications.
 
-### **PowerShell**
+🔗 <https://www.cisecurity.org/cis-benchmarks/>
+
+For Windows Server, CIS Benchmarks often enforce:
+
+*   Ignoring locally created firewall rules on the **Public** profile
+*   Mandatory use of centrally managed **GPO firewall rules**
+*   Highly restrictive inbound policy defaults
+*   Alignment with NIST, ISO 27001, and Zero Trust frameworks
+
+If your organization implements CIS Level 1 or Level 2 benchmarks, local firewall rules may not apply, and only GPO-sourced rules will be honored.
+
+***
+
+## What GPO Firewall Rules Are
+
+A **Group Policy Object (GPO)** is a centrally managed configuration package distributed through **Active Directory**.
+
+A **GPO firewall rule**:
+
+*   Is enforced by domain controllers
+*   Overrides locally created rules
+*   Ensures consistent, auditable security policy
+*   Is required for systems hardened under CIS baselines
+
+If your Public profile ignores local rules, **GPO rules are the only rules that apply**.
+
+***
+
+## 1. Determine the Active Windows Firewall Profile
+
+### PowerShell
 
 ```powershell
 Get-NetFirewallSetting -PolicyStore ActiveStore |
   Select-Object -ExpandProperty ActiveProfile
 ```
 
-### **Command Line**
+### Command Line
 
 ```cmd
 netsh advfirewall show currentprofile
 ```
 
-If **Public** is active, continue to Section 2.
+If **Public** is active, continue.
+
+**Reference:** KB0015997 – Determine Active Windows Firewall Profile  
+🔗 <https://esri.service-now.com/api/now/table/kb_knowledge_base/0122d41adba8a700951dab8b4b9619ed>
 
 ***
 
-## **2. Detect Whether Local Rules Are Being Ignored (CIS Baseline Behavior)**
+## 2. Detect Whether Local Rules Are Being Ignored (CIS/GPO Behavior)
 
-Many organizations configure hardened baselines (e.g., **CIS Benchmarks**) to **disable local firewall rules** for the Public profile.
-
-### **Check Public Profile Settings**
+### Check Public Profile Settings
 
 ```powershell
 Get-NetFirewallProfile -Profile Public |
   Select-Object Name, DefaultInboundAction, AllowLocalFirewallRules, AllowLocalIPsecRules
 ```
 
-If `AllowLocalFirewallRules = False`, any local “Allow inbound TCP 8888” rule will be ignored.
+If `AllowLocalFirewallRules = False`, the machine is enforcing CIS-like restrictions.
 
-### **Check the Effective Rule Source**
+### Check Effective Rule Sources
 
 ```powershell
 Get-NetFirewallRule -PolicyStore ActiveStore |
   Select-Object DisplayName, Enabled, Direction, Action, Profile, PolicyStoreSource
 ```
 
-*If the only rules that apply to the Public profile come from `GroupPolicy`, the machine is enforcing centralized security baselines.*
+If only `GroupPolicy` rules appear for the Public profile, local rules are being ignored.
+
+**Reference:** KB0015998 – Domain Profile Not Selected (NLA Troubleshooting)  
+🔗 <https://esri.service-now.com/api/now/table/kb_knowledge_base/0122d41adba8a700951dab8b4b9619ed>
 
 ***
 
-## **3. Resolution Options**
+## 3. Resolution Options
 
-### **Option A — Add a GPO Firewall Rule for the Public Profile (Recommended in Hardened Environments)**
+### Option A — Add a GPO Firewall Rule (Recommended for CIS Environments)
 
-Since local rules are ignored, create a **GPO-based inbound rule**:
+Create a **GPO-delivered inbound allow rule**:
 
-*   Profile: **Public**
-*   Action: **Allow**
-*   Protocol/Port: **TCP 8888** (or the Notebook Server → Docker port range: e.g., 30001–31000)
-*   Scope: Server(s) hosting ArcGIS Notebook Server
+| Setting       | Value                                                     |
+| ------------- | --------------------------------------------------------- |
+| Profile       | Public                                                    |
+| Protocol/Port | TCP **8888**                                              |
+| Optional      | Port range **30001–31000** for Notebook → Docker mappings |
+| Rule Source   | Group Policy                                              |
 
-This is the **correct** fix when CIS or enterprise baselines block local rules.
-
-***
-
-### **Option B — Change Docker NAT Adapter to Private Profile**
-
-If organizational policy allows, change the Docker NAT network category from Public → Private.
-
-#### **Steps**
-
-1.  Identify the adapter:
-    ```powershell
-    Get-NetConnectionProfile | Format-Table Name, InterfaceAlias, NetworkCategory
-    ```
-    Look for: **vEthernet (nat)**
-
-2.  Change category:
-    ```powershell
-    Set-NetConnectionProfile -InterfaceAlias "vEthernet (nat)" -NetworkCategory Private
-    ```
-
-After changing, re-run `netsh advfirewall show currentprofile` and validate expected behavior.
+This is the correct solution when local rules are ignored.
 
 ***
 
-### **Option C — Temporary Test: Disable Public Firewall**
+### Option B — Change the Docker NAT Adapter to Private
 
-**Only for diagnostics.**
+If allowed by IT/security policy, this lets local firewall rules apply.
+
+#### Identify the adapter:
+
+```powershell
+Get-NetConnectionProfile | Format-Table Name, InterfaceAlias, NetworkCategory
+```
+
+#### Change the category:
+
+```powershell
+Set-NetConnectionProfile -InterfaceAlias "vEthernet (nat)" -NetworkCategory Private
+```
+
+Re-check the active firewall profile after making the change.
+
+***
+
+### Option C — Diagnostic Only: Temporarily Disable Public Firewall
 
 ```powershell
 Set-NetFirewallProfile -Profile Public -Enabled False
 ```
 
-If the Notebook Server immediately works, the issue is confirmed as Public-profile enforcement (CIS baseline + ignored local rules).
+If everything works immediately, you have confirmed that the Public profile was blocking required traffic.  
+**Do not** use this as a permanent solution.
 
 ***
 
-## **4. Validate End-to-End Connectivity**
+## 4. Validate End-to-End Connectivity
 
-After applying A or B:
-
-### **From the host**
+### Test host-to-container connection:
 
 ```powershell
 Test-NetConnection -ComputerName 127.0.0.1 -Port 8888
 ```
 
-### **Check Docker's NAT port mappings**
+### Validate NAT port mappings:
 
 ```powershell
 Get-NetNatStaticMapping
 ```
 
-### **Verify effective firewall rules**
+### Check effective rules (GUI):
 
-In **wf.msc → Monitoring → Firewall → Effective Rules**, confirm:
+Open **wf.msc → Monitoring → Firewall → Effective Rules**
 
-*   Your rule appears
-*   Source = **Group Policy** (if Option A)
-*   Profile = **Public** or **Private**, depending on your configuration
-
-***
-
-## **5. Recommended Practice for ArcGIS Notebook Deployments**
-
-*   Standardize whether Docker NAT adapters should be **Private** or **Public with GPO rules**.
-*   If using CIS baselines, always create **GPO-based firewall exceptions** rather than relying on local rules.
-*   Document required ports:
-    *   **8888** (Jupyter Notebook)
-    *   **30001–31000** (Notebook Server → Docker container ephemeral mapping range)
+*   Confirm the rule appears
+*   Confirm **Policy Source = GroupPolicy** if using Option A
 
 ***
 
-## **6. Quick Reference**
+## 5. Recommended Practices
 
-### **Common Commands**
+*   Establish whether Docker NAT should be treated as **Private** or remain **Public + GPO rules**.
+*   If CIS Benchmarks are active:
+    *   Assume local rules do not apply
+    *   Always apply ports through **GPO**
+*   Required Notebook Server ports:
+    *   **8888** (Jupyter)
+    *   **30001–31000** (ephemeral mapping range)
+*   Follow ArcGIS Enterprise Hardening practices.
+
+### Hardening Guides (Internal Files)
+
+*   *ArcGIS\_Enterprise\_Hardening\_Guide.pdf*
+*   *ArcGIS\_Enterprise\_Hardening\_Guide\_March\_2025.pdf*
+
+(These are internal SharePoint/OneDrive assets accessible in the Esri environment.)
+
+***
+
+## 6. Quick Command Reference
 
 ```powershell
-# Active profile
+# Active firewall profile
 netsh advfirewall show currentprofile
 
-# Firewall profile details
+# Public profile settings
 Get-NetFirewallProfile -Profile Public
 
-# Effective rule sources
+# Effective firewall rule sources
 Get-NetFirewallRule -PolicyStore ActiveStore
 
-# NAT adapter profile fix
+# Change Docker NAT to Private
 Set-NetConnectionProfile -InterfaceAlias "vEthernet (nat)" -NetworkCategory Private
 ```
 
 ***
 
-## **7. Summary**
+## 7. Additional Useful References
 
-Most customer and internal cases trace back to:
+*   **CIS Benchmarks (Windows Server)**  
+    <https://www.cisecurity.org/cis-benchmarks/>
 
-*   Docker NAT adapter categorized as **Public**, **AND**
-*   Hardened baseline sets **“Ignore local firewall rules”** for Public, **SO**
-*   Local allow rules appear correct but **never apply**
+*   **Internal Case: Docker / Public Firewall / CIS Baseline Issue**  
+    <https://esri.lightning.force.com/lightning/r/Case/500UU00000ICkkjYAD/view>
 
-The fix is either:
+*   **KB0015997 – Determine Active Windows Firewall Profile**  
+    <https://esri.service-now.com/api/now/table/kb_knowledge_base/0122d41adba8a700951dab8b4b9619ed>
 
-1.  **Create a GPO-based allow rule** (preferred under CIS), or
-2.  **Change NAT to Private**.
+*   **KB0015998 – Domain Profile Not Selected (NLA Issue)**  
+    <https://esri.service-now.com/api/now/table/kb_knowledge_base/0122d41adba8a700951dab8b4b9619ed>
+
