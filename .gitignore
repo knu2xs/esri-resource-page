@@ -9,3 +9,6 @@ site
 
 # any secret files
 **/*secret*.*
+
+## PyCharm
+.idea
