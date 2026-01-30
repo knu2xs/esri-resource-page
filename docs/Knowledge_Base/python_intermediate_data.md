@@ -50,7 +50,6 @@ arcpy.conversion.FeatureClassToFeatureClass(
 )
 ```
 
-
 ## Using a File Geodatabase in a Temporary Directory
 
 ArcPy does provide a temporary file geodatabase accessed through `arcpy.env.scratchGDB`. In my experience, although not frequent, this workspace _can get corrupted_. For this reason, I have started to utilize the Python `tempfile` module to provide an ephmerial location for storing intermediate data, with automatic script cleanup within the Python `try/except/finally` structure.
@@ -141,17 +140,19 @@ finally:
 For reusability, you can also create a decorator to handle the temporary file geodatabase creation and cleanup. In this example, the decorator `with_temp_fgdb` creates a temporary file geodatabase, sets it as the workspace for the decorated function, and cleans up afterward.
 
 References:
-- [`functools.wraps`]
+- [`functools.wraps`](https://docs.python.org/3/library/functools.html#functools.wraps)
 - [`pathlib.Path`]
 
 !!! note
-    This example uses type hints and the `Path` class from the `pathlib` module for improved code clarity. Make sure to import `Union` and `Path` from the `typing` and `pathlib` modules respectively if you use this code.
+    This example uses type hints and the `Path` class from the `pathlib` module for improved code clarity. It also demonstrates using type hints for function arguments and return types.
 
 ``` python
 import os.path
 import shutil
 import tempfile
 from functools import wraps
+from pathlib import Path
+from typing import Any, Callable, TypeVar, Union, 
 
 import arcpy
 
@@ -162,10 +163,10 @@ INPUT_TRACTS = r'D:\data\raw\census.gdb\tracts'
 OUTPUT_FEATURES = r'D:\data\output\final.gdb\tracts_with_address_counts'
 
 
-def with_temp_fgdb(func):
+def with_temp_fgdb(func: Callable) -> Callable:
     """Decorator to provide a temporary file geodatabase for intermediate data."""
-    @wraps(func)
-    def wrapper(*args, **kwargs):
+    @wraps(func: Callable)
+    def wrapper(*args, **kwargs) -> Any:
         # create temporary directory
         tmp_dir = tempfile.mkdtemp()
 
