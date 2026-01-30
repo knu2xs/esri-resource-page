@@ -1,35 +1,45 @@
 # ArcPy Intermediate Data
 
-When doing creating analysis workflows using ArcPy tools, a vast majority of tools create an output dataset. These intermediate datasets, where they are stored and cleaning them following a script run, can pose challenges to repeatablity and portability of scripts. 
+When scripting analysis workflows using ArcPy, most tools create output datasets. Managing these intermediate datasets—where they're stored and how to clean them up—can pose challenges to script repeatability and portability.
 
-Typically, when scripting a workflow, you will need to manage the input and output as parameters for a script or function. The intermediate data created, data needed in between steps in the analysis workflow, from experience, I have come up with a few strategies for handling this intermediate data. These strategies include using the `memory` workspace, and creating my own temporary file geodatabase for intermediate data with every script run.
+This guide covers two strategies for handling intermediate data:
 
-## ArcPy `memory` workspace
+1. **Memory workspace** – Fast, simple, but limited by available RAM
+2. **Temporary file geodatabase** – More robust, with automatic cleanup
 
-Reference: [Write geoprocessing output to memory—ArcGIS Pro](https://pro.arcgis.com/en/pro-app/latest/help/analysis/geoprocessing/basics/the-in-memory-workspace.htm)
+---
 
-If the dataset is not too large, if it is small enough to fit into the memory of the instance where you are working, by far the easiest intermediate data storage locations is the `memory` workspace. Utilizing this workspace is as simple as prefixing the intermediate dataset name with `memory`. Hence, if performing a spatial overlay between address points and tract polygons to get the count, and want to name the output feature class `tract_addr_cnt`, all you need to do is create a path for output as a string`"memory/tract_addr_cnt"`.
+## Option 1: Memory Workspace
 
-``` python
+**Reference:** [Write geoprocessing output to memory—ArcGIS Pro](https://pro.arcgis.com/en/pro-app/latest/help/analysis/geoprocessing/basics/the-in-memory-workspace.htm)
+
+For smaller datasets fiting into memory, using the `memory` workspace is by far the simplest approach. Just prefix your output dataset name with `memory/`:
+
+```python
+out_feature_class = "memory/output_dataset"
+```
+
+### Example
+
+```python
 import os.path
-
 import arcpy
 
-# script constants
+# Script constants
 INPUT_POINTS = r'D:\data\raw\address.gdb\address_points'
 INPUT_TRACTS = r'D:\data\raw\census.gdb\tracts'
-OUTPUT_FEATURES = r'D:\data\output\final.gdb'
+OUTPUT_FEATURES = r'D:\data\output\final.gdb\tracts_with_counts'
 
-# perform spatial overlay to get count of points per tract - putting output into temp file geodatabase
+# Perform spatial join, storing result in memory
 points_per_tract = arcpy.analysis.SpatialJoin(
     target_features=INPUT_TRACTS,
     join_features=INPUT_POINTS,
-    out_feature_class='workspace/points_per_tract',  # using memory workspace
+    out_feature_class='memory/points_per_tract',
     match_option='INTERSECT',
     join_type='KEEP_ALL',
 )[0]
 
-# create the field mapping to rename the Join_Count field to tract_addr_count and keep the other fields inherited from tracts as is
+# Rename Join_Count field to tract_addr_count
 field_mappings = arcpy.FieldMappings()
 field_mappings.addTable(points_per_tract)
 join_count_index = field_mappings.findFieldMapIndex('Join_Count')
@@ -37,11 +47,11 @@ join_count_field_map = field_mappings.getFieldMap(join_count_index)
 join_count_field_map.outputField.name = 'tract_addr_count'
 field_mappings.replaceFieldMap(join_count_index, join_count_field_map)
 
-# ensure output file geodatabase exists
+# Validate output geodatabase exists
 if not arcpy.management.Exists(os.path.dirname(OUTPUT_FEATURES)):
     raise FileNotFoundError(f'Output geodatabase does not exist: {os.path.dirname(OUTPUT_FEATURES)}')
 
-# use feature class to feature class to copy features from temporary gdb to final output gdb, renaming the spatial join count to tract_addr_count
+# Export to final location
 arcpy.conversion.FeatureClassToFeatureClass(
     in_features=points_per_tract,
     out_path=os.path.dirname(OUTPUT_FEATURES),
@@ -50,50 +60,37 @@ arcpy.conversion.FeatureClassToFeatureClass(
 )
 ```
 
-## File Geodatabase in a Temporary Directory
+---
 
-ArcPy does provide a temporary file geodatabase accessed through `arcpy.env.scratchGDB`. In my experience, although not frequent, this workspace _can get corrupted_. For this reason, I have started to utilize the Python `tempfile` module to provide an ephmerial location for storing intermediate data, with automatic script cleanup within the Python `try/except/finally` structure.
+## Option 2: Temporary File Geodatabase
 
-References:
+ArcPy provides `arcpy.env.scratchGDB` for temporary data. However, I have occasionally encountered issues with this scratch file geodatabase becoming corrupted, and interrupting my scripts, especially those I have set up as scheduled tasks. A more reliable approach I have discovered uses  Python's `tempfile` module to create an ephemeral directory with Python's `try / except / finally` structure for automatic cleanup. 
 
-- [`tempfile,gettempdir`](https://docs.python.org/3/library/tempfile.html#tempfile.gettempdir)
-- [try/except/finally](https://docs.python.org/3/reference/compound_stmts.html#try)
+**References:**
+
+- [`tempfile.gettempdir`](https://docs.python.org/3/library/tempfile.html#tempfile.gettempdir)
+- [`try / except / finally`](https://docs.python.org/3/reference/compound_stmts.html#try)
 - [`arcpy.env.scratchGDB`](https://pro.arcgis.com/en/pro-app/latest/tool-reference/environment-settings/scratch-gdb.htm)
 
-### Example with Logic Embedded
+### Example: Inline Approach
 
-In this example, we perform a spatial overlay to get the count of address points within census tracts, storing intermediate data in a temporary file geodatabase created in a temporary directory. Finally, we clean up the temporary data whether or not an error occurs. The logic for creating the temporary file geodatabase is part of the flow of the script.
-
-References:
-
-- [arcpy.env.workspace](https://pro.arcgis.com/en/pro-app/latest/tool-reference/environment-settings/current-workspace.htm)
-- [arcpy.EnvManager](https://pro.arcgis.com/en/pro-app/latest/arcpy/classes/envmanager.htm)
-
-``` python
+```python
 import os.path
 import shutil
 import tempfile
-
 import arcpy
 
-# script constants
 INPUT_POINTS = r'D:\data\raw\address.gdb\address_points'
 INPUT_TRACTS = r'D:\data\raw\census.gdb\tracts'
-OUTPUT_FEATURES = r'D:\data\output\final.gdb'
+OUTPUT_FEATURES = r'D:\data\output\final.gdb\tracts_with_counts'
 
-# within the try block, create the the temporary file geodatabase and use it for analysis
 try:
-
-    # create temporary directory
+    # Create temporary directory and geodatabase
     tmp_dir = tempfile.mkdtemp()
+    tmp_gdb = arcpy.management.CreateFileGDB(out_folder_path=tmp_dir, out_name='temp_data.gdb')[0]
 
-    # create temporary file geodatabase in temporary directory to use for intermediate data
-    tmp_gdb = arcpy.management.MakeFileGDB(out_folder_path=tmp_dir, out_name='temp_data.gdb')[0]
-
-    # set the arcpy workspace to the temporary file geodatabase so intermediate data is stored there
     with arcpy.EnvManager(workspace=tmp_gdb):
-
-        # perform spatial overlay to get count of points per tract - putting output into temp file geodatabase
+        # spatial join creating intermediate data
         points_per_tract = arcpy.analysis.SpatialJoin(
             target_features=INPUT_TRACTS,
             join_features=INPUT_POINTS,
@@ -102,7 +99,7 @@ try:
             join_type='KEEP_ALL',
         )[0]
 
-        # create the field mapping to rename the Join_Count field to tract_addr_count and keep the other fields inherited from tracts as is
+        # Rename field
         field_mappings = arcpy.FieldMappings()
         field_mappings.addTable(points_per_tract)
         join_count_index = field_mappings.findFieldMapIndex('Join_Count')
@@ -110,11 +107,11 @@ try:
         join_count_field_map.outputField.name = 'tract_addr_count'
         field_mappings.replaceFieldMap(join_count_index, join_count_field_map)
 
-        # ensure output file geodatabase exists
+        # Validate and export
         if not arcpy.management.Exists(os.path.dirname(OUTPUT_FEATURES)):
             raise FileNotFoundError(f'Output geodatabase does not exist: {os.path.dirname(OUTPUT_FEATURES)}')
 
-        # use feature class to feature class to copy features from temporary gdb to final output gdb, renaming the spatial join count to tract_addr_count
+        # creating permanant output data
         arcpy.conversion.FeatureClassToFeatureClass(
             in_features=points_per_tract,
             out_path=os.path.dirname(OUTPUT_FEATURES),
@@ -122,82 +119,96 @@ try:
             field_mapping=field_mappings
         )
 
-# if an error occurs, raise it
-except Exception as e:
+# still raise any errors encountered - facilitates debugging
+except Exception:
     raise
 
-# clean up temporary data whether or not an error occurred
+# whether the script runs or encounters errors, clean up temporary data created
 finally:
-    # first, delete the file geodatabase using arcpy - this avoids some errors due to hanging schema locks
+    # delete geodatabase first to release any potential schema locks
     arcpy.management.Delete(tmp_gdb)
-
-    # next clean up the temporary directory and anything left in it
     shutil.rmtree(tmp_dir, ignore_errors=True)
 ```
 
-### As a Decorator
+---
 
-For reusability, you can also create a decorator to handle the temporary file geodatabase creation and cleanup. In this example, the decorator `with_temp_fgdb` creates a temporary file geodatabase, sets it as the workspace for the decorated function, and cleans up afterward.
+### Example: Reusable Decorator
 
-This paradigm makes it easy to handle itermediate data. You only need to provide a name for any intermediate datasets. These intermediate datasets will be saved in an ephemeral file geodatabase automatically cleaned up when the script is finished running, even if an error is encountered. Also, since errors are still raised, you can still debug and troubleshoot any issues with the processing logic.
+Wrapping the above pattern in a reusable decorator makes this paradim much more reusuable. To take advantage of the temporary file geodatabase, all you have to do is apply the `@with_temp_fgdb` decorator to any ArcPy spatial analysis function.
 
-References:
+**References:**
 
 - [`functools.wraps`](https://docs.python.org/3/library/functools.html#functools.wraps)
 - [`pathlib.Path`](https://docs.python.org/3/library/pathlib.html)
 
-!!! note
+!!! tip
 
-    This example uses type hints for improved code clarity and the `Path` class from the `pathlib` module, which makes path manipulation much easier. The only difficulty in using `Path` objecst is ArcPy cannot handle `Path` objects, so you have to convert `Path` objects back into strings before passing into any ArcPy functions.
+    ArcPy doesn't accept `Path` objects directly. Consequently, you must convert them to strings first.
 
-    ``` python
-    path_to_data = Path(r"C:\path\to.gdb\data")
-    arcpy.DoSomething(str(path_to_data))
+    ```python
+    arcpy.DoSomething(str(path_object))
     ```
 
-``` python
-import os.path
+```python
 import shutil
 import tempfile
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, TypeVar, Union, 
+from typing import Any, Callable, Union
 
 import arcpy
 
 
-# script constants - easily parameterized using sys.argv
-INPUT_POINTS = r'D:\data\raw\address.gdb\address_points'
-INPUT_TRACTS = r'D:\data\raw\census.gdb\tracts'
-OUTPUT_FEATURES = r'D:\data\output\final.gdb\tracts_with_address_counts'
-
-
 def with_temp_fgdb(func: Callable) -> Callable:
-    """Decorator to provide a temporary file geodatabase for intermediate data."""
-    @wraps(func: Callable)
+    """
+    ## Temporary File Geodatabase Decorator
+
+    This decorator function creates and manages a temporary file geodatabase that can be used to store intermediate data during geoprocessing operations.
+
+    ### Purpose
+
+    When performing complex geoprocessing workflows in ArcGIS/ArcPy, intermediate results often need to be stored temporarily before producing final outputs.
+    
+    This decorator:
+
+    1. **Creates a temporary workspace** - Automatically generates a temporary file geodatabase before the decorated function executes
+    2. **Provides the path** - Passes the geodatabase path to the decorated function so it can write intermediate feature classes, tables, or rasters
+    3. **Handles cleanup** - Automatically deletes the temporary geodatabase and all its contents after the function completes (whether successful or not)
+
+    ### Benefits
+
+    - **Prevents workspace clutter** - No leftover temporary files in your project directories
+    - **Automatic resource management** - No need to manually create/delete temp workspaces
+    - **Exception safety** - Cleanup occurs even if the function raises an error
+    - **Reusable pattern** - Can be applied to any function needing temporary storage
+
+    ### Typical Use Case
+
+    Useful when a geoprocessing workflow requires multiple steps where intermediate outputs from one tool become inputs to another, but those intermediate outputs are not needed in the final result.
+    """
+
+    # @wraps preserves the original function's metadata (name, docstring, etc.) when creating the wrapper
+    @wraps(func)
     def wrapper(*args, **kwargs) -> Any:
-        # create temporary directory
+    
+        # create the temporary directory and file geodatabase
         tmp_dir = tempfile.mkdtemp()
+        tmp_gdb = arcpy.management.CreateFileGDB(out_folder_path=tmp_dir, out_name='temp_data.gdb')[0]
 
-        # create temporary file geodatabase in temporary directory to use for intermediate data
-        tmp_gdb = arcpy.management.MakeFileGDB(out_folder_path=tmp_dir, out_name='temp_data.gdb')[0]
-
+        # use the try block to invoke the wrapped function
         try:
-            # execute the decorated function with the temporary geodatabase set as the workspace
+
+            # set the workspace to the temporary file geodatabase so any intermediate datasets are cleaned up
             with arcpy.EnvManager(workspace=tmp_gdb):
                 return func(*args, **kwargs)
 
-        # make sure to raise any exceptions encountered
-        except Exception as e:
+        # still raise exceptions so errors can be debugged
+        except Exception:
             raise
 
-        # clean up temporary data whether or not an error occurred
+        # clean up intermediate data, even if errors are encountered
         finally:
-            # first, delete the file geodatabase using arcpy - this avoids some errors due to hanging schema locks
             arcpy.management.Delete(tmp_gdb)
-
-            # next clean up the temporary directory and anything left in it
-            # if this throws an error, try doing this using arcpy.management.Delete
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
     return wrapper
@@ -205,29 +216,27 @@ def with_temp_fgdb(func: Callable) -> Callable:
 
 @with_temp_fgdb
 def perform_analysis(
-    input_points: Union[arcpy._mp.FeatureLayer, Path, str], 
-    input_tracts: Union[arcpy._mp.FeatureLayer, Path, str], 
-    output_features: Union[Path, str]
+    input_points: Union[str, Path],
+    input_tracts: Union[str, Path],
+    output_features: Union[str, Path]
 ) -> Path:
     """
-    Perform analysis using a temporary file geodatabase for intermediate data.
+    Perform spatial analysis with automatic intermediate data cleanup. If copying this script, customize this function to do your spatial analysis.
 
     Args:
-        input_points: The input point features as a FeatureLayer, Path, or string.
-        input_tracts: The input tract features as a FeatureLayer, Path, or string.
-        output_features: The output feature class path as a Path.
+        input_points: Path to input point features.
+        input_tracts: Path to input tract features.
+        output_features: Path for output feature class.
 
     Returns:
-        The path to the output feature class.
+        Path to the output feature class.
     """
-    # ensure input feature parameter Paths are strings
-    input_points = str(input_points) if isinstance(input_points, Path) else input_points
-    input_tracts = str(input_tracts) if isinstance(input_tracts, Path) else input_tracts
+    # Normalize paths
+    input_points = str(input_points)
+    input_tracts = str(input_tracts)
+    output_features = Path(output_features)
 
-    # ensure output feature parameter is a Path
-    output_features = Path(output_features) if isinstance(output_features, str) else output_features
-
-    # perform spatial overlay to get count of points per tract - putting output into temp file geodatabase
+    # Spatial join
     points_per_tract = arcpy.analysis.SpatialJoin(
         target_features=input_tracts,
         join_features=input_points,
@@ -236,7 +245,7 @@ def perform_analysis(
         join_type='KEEP_ALL',
     )[0]
 
-    # create the field mapping to rename the Join_Count field to tract_addr_count and keep the other fields inherited from tracts as is
+    # Rename field
     field_mappings = arcpy.FieldMappings()
     field_mappings.addTable(points_per_tract)
     join_count_index = field_mappings.findFieldMapIndex('Join_Count')
@@ -244,44 +253,44 @@ def perform_analysis(
     join_count_field_map.outputField.name = 'tract_addr_count'
     field_mappings.replaceFieldMap(join_count_index, join_count_field_map)
 
-    # ensure output file geodatabase exists
+    # make sure the output file geodatabase exists as a directory
     if not arcpy.management.Exists(str(output_features.parent)):
         raise FileNotFoundError(f'Output geodatabase does not exist: {output_features.parent}')
 
-    # ensure output file geodatabase is a valid file geodatabase
+    # describe and ensure the file geodatbase directory is a valid and non-corrupted file geodatabase
     desc = arcpy.Describe(str(output_features.parent))
-    if desc.dataType != 'Workspace' or desc.workspaceType != 'FileSystem' or not desc.isFileGDB:
-        raise ValueError(f'Output geodatabase is not a valid file geodatabase: {output_features.parent}')
+    if desc.dataType != 'Workspace' or desc.workspaceType != 'LocalDatabase':
+        raise ValueError(f'Output path is not a valid file geodatabase: {output_features.parent}')
 
-    # use feature class to feature class to copy features from temporary gdb to final output gdb, renaming the spatial join count to tract_addr_count
+    # create output features
     arcpy.conversion.FeatureClassToFeatureClass(
         in_features=points_per_tract,
-        out_path=str(output_features.parent),  # has to be a string for arcpy
+        out_path=str(output_features.parent),
         out_name=output_features.name,
         field_mapping=field_mappings
     )
 
     return output_features
 
-# execute the analysis
+
 if __name__ == '__main__':
 
+    # call spatial analysis function
     perform_analysis(
-        input_points=INPUT_POINTS, 
-        input_tracts=INPUT_TRACTS, 
-        output_features=OUTPUT_FEATURES
+        input_points=r'D:\data\raw\address.gdb\address_points',
+        input_tracts=r'D:\data\raw\census.gdb\tracts',
+        output_features=r'D:\data\output\final.gdb\tracts_with_address_counts'
     )
 ```
 
 !!! tip
+    When a tool requires separate geodatabase and feature class name parameters, use `arcpy.env.workspace` for the geodatabase:
 
-    If a tool in your workflow requires the file geodatabase and output dataset (table or feature class) name as separate parameters, since the decorator with wraps sets the current workspace, you can provide the file geodatabase as `arcpy.env.workspace`.
-
-    For instance, the Create Feature Class tool requires specifying the geodatabase path and the feature class name as separate parameters. In this case, you can specify the output geodatabase path as `arpcy.env.workspace`.
-
-    ``` python
+    ```python
     arcpy.management.CreateFeatureclass(
-        out_path=arcpy.env.workspace, 
+        out_path=arcpy.env.workspace,
         out_name="feature_class_name"
     )
     ```
+
+    This works because the `@with_temp_fgdb` decorator sets the workspace to the temporary geodatabase using `arcpy.EnvManager(workspace=tmp_gdb)` before calling the wrapped spatial analysis function. Any code inside the decorated spatial analysis function can reference `arcpy.env.workspace` to get the path to this temporary geodatabase.
