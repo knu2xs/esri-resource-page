@@ -4,7 +4,7 @@ When doing creating analysis workflows using ArcPy tools, a vast majority of too
 
 Typically, when scripting a workflow, you will need to manage the input and output as parameters for a script or function. The intermediate data created, data needed in between steps in the analysis workflow, from experience, I have come up with a few strategies for handling this intermediate data. These strategies include using the `memory` workspace, and creating my own temporary file geodatabase for intermediate data with every script run.
 
-## `memory` workspace
+## ArcPy `memory` workspace
 
 Reference: [Write geoprocessing output to memory—ArcGIS Pro](https://pro.arcgis.com/en/pro-app/latest/help/analysis/geoprocessing/basics/the-in-memory-workspace.htm)
 
@@ -50,7 +50,7 @@ arcpy.conversion.FeatureClassToFeatureClass(
 )
 ```
 
-## Using a File Geodatabase in a Temporary Directory
+## File Geodatabase in a Temporary Directory
 
 ArcPy does provide a temporary file geodatabase accessed through `arcpy.env.scratchGDB`. In my experience, although not frequent, this workspace _can get corrupted_. For this reason, I have started to utilize the Python `tempfile` module to provide an ephmerial location for storing intermediate data, with automatic script cleanup within the Python `try/except/finally` structure.
 
@@ -139,6 +139,8 @@ finally:
 
 For reusability, you can also create a decorator to handle the temporary file geodatabase creation and cleanup. In this example, the decorator `with_temp_fgdb` creates a temporary file geodatabase, sets it as the workspace for the decorated function, and cleans up afterward.
 
+This paradigm makes it easy to handle itermediate data. You only need to provide a name for any intermediate datasets. These intermediate datasets will be saved in an ephemeral file geodatabase automatically cleaned up when the script is finished running, even if an error is encountered. Also, since errors are still raised, you can still debug and troubleshoot any issues with the processing logic.
+
 References:
 
 - [`functools.wraps`](https://docs.python.org/3/library/functools.html#functools.wraps)
@@ -189,6 +191,7 @@ def with_temp_fgdb(func: Callable) -> Callable:
             arcpy.management.Delete(tmp_gdb)
 
             # next clean up the temporary directory and anything left in it
+            # if this throws an error, try doing this using arcpy.management.Delete
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
     return wrapper
@@ -264,11 +267,9 @@ if __name__ == '__main__':
     )
 ```
 
-This paradigm makes it easy to handle itermediate data. You only need to provide a name for any intermediate datasets. These intermediate datasets will be saved in an ephemeral file geodatabase automatically cleaned up when the script is finished running, even if an error is encountered. Also, since errors are still raised, you can still debug and troubleshoot any issues with the processing logic.
-
 !!! note
 
-    If a tool in your workflow requires the file geodatabase and output dataset (table or feature class) name as separate parameters, since the decorator with wraps sets the current workspace, you can provide the file geodabase as `arcpy.env.workspace`.
+    If a tool in your workflow requires the file geodatabase and output dataset (table or feature class) name as separate parameters, since the decorator with wraps sets the current workspace, you can provide the file geodatabase as `arcpy.env.workspace`.
 
     For instance, the Create Feature Class tool requires specifying the geodatabase path and feature class names as separate parameters. In this case, you can specify the output geodatabase path as `arpcy.env.workspace`.
 
