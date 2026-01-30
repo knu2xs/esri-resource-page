@@ -8,7 +8,7 @@ Typically, when scripting a workflow, you will need to manage the input and outp
 
 Reference: [Write geoprocessing output to memory—ArcGIS Pro](https://pro.arcgis.com/en/pro-app/latest/help/analysis/geoprocessing/basics/the-in-memory-workspace.htm)
 
-If the dataset is not too large, if it is small enough to fit into the memory of the instance where you are working, by far the easiest data storage locations is the `memory` workspace. Utilizing this workspace is as simple as prefixing the intermediate dataset name with `memory`. Hence, if performing a spatial overlay between address points and tract polygons to get the count, and want to name the output feature class `tract_addr_cnt`, all you need to do is create a path for output as a string`"memory/tract_addr_cnt"`.
+If the dataset is not too large, if it is small enough to fit into the memory of the instance where you are working, by far the easiest intermediate data storage locations is the `memory` workspace. Utilizing this workspace is as simple as prefixing the intermediate dataset name with `memory`. Hence, if performing a spatial overlay between address points and tract polygons to get the count, and want to name the output feature class `tract_addr_cnt`, all you need to do is create a path for output as a string`"memory/tract_addr_cnt"`.
 
 ``` python
 import os.path
@@ -48,11 +48,12 @@ arcpy.conversion.FeatureClassToFeatureClass(
     out_name=os.path.basename(OUTPUT_FEATURES),
     field_mapping=field_mappings
 )
+```
 
 
 ## Using a File Geodatabase in a Temporary Directory
 
-ArcPy does provide a temporary file geodatabase accessed through `arcpy.env.scratchGDB`. In my experience, although not frequent, this workspace can get corrupted. For this reason, I have started to utilize the Python `tempfile` module to provide an ephmerial location for storing intermediate data, with automatic script cleanup within the Python `try/except/finally` structure.
+ArcPy does provide a temporary file geodatabase accessed through `arcpy.env.scratchGDB`. In my experience, although not frequent, this workspace _can get corrupted_. For this reason, I have started to utilize the Python `tempfile` module to provide an ephmerial location for storing intermediate data, with automatic script cleanup within the Python `try/except/finally` structure.
 
 References:
 
