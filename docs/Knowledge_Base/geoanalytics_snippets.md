@@ -1,4 +1,4 @@
-# GeoAnalytics Engine
+# GeoAnalytics Engine Code Samples
 
 ## Documentation
 - [ArcGIS Developers Geoanalytics](https://developers.arcgis.com/geoanalytics/)

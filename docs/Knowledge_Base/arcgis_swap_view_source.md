@@ -1,9 +1,6 @@
 # Swap ArcGIS Online View Source
 
-There are times when it is just easier to swap the source for a Feature Layer View manually. Doing this manually requires going to the
-item page, and going to the REST endpoint. From there click on Admin in the top right corner of the page. This will take you to another
-similar page, with the _Supported Operations_ now including _Add to Definition_ and _Delete from Definition_. These will be used to first
-remove the existing reference to the Feature Service, and next, add the new.
+There are times when it is just easier to swap the source for a Feature Layer View manually. Doing this manually requires going to the item page, and going to the REST endpoint. From there click on Admin in the top right corner of the page. This will take you to another similar page, with the _Supported Operations_ now including _Add to Definition_ and _Delete from Definition_. These will be used to first remove the existing reference to the Feature Service, and next, add the new.
 
 ## Remove Existing
 
