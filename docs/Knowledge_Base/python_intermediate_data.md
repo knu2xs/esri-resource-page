@@ -140,8 +140,9 @@ finally:
 For reusability, you can also create a decorator to handle the temporary file geodatabase creation and cleanup. In this example, the decorator `with_temp_fgdb` creates a temporary file geodatabase, sets it as the workspace for the decorated function, and cleans up afterward.
 
 References:
+
 - [`functools.wraps`](https://docs.python.org/3/library/functools.html#functools.wraps)
-- [`pathlib.Path`]
+- [`pathlib.Path`](https://docs.python.org/3/library/pathlib.html)
 
 !!! note
     This example uses type hints and the `Path` class from the `pathlib` module for improved code clarity. It also demonstrates using type hints for function arguments and return types.
@@ -262,3 +263,18 @@ if __name__ == '__main__':
         output_features=OUTPUT_FEATURES
     )
 ```
+
+This paradigm makes it easy to handle itermediate data. You only need to provide a name for any intermediate datasets. These intermediate datasets will be saved in an ephemeral file geodatabase automatically cleaned up when the script is finished running, even if an error is encountered. Also, since errors are still raised, you can still debug and troubleshoot any issues with the processing logic.
+
+!!! note
+
+    If a tool in your workflow requires the file geodatabase and output dataset (table or feature class) name as separate parameters, since the decorator with wraps sets the current workspace, you can provide the file geodabase as `arcpy.env.workspace`.
+
+    For instance, the Create Feature Class tool requires specifying the geodatabase path and feature class names as separate parameters. In this case, you can specify the output geodatabase path as `arpcy.env.workspace`.
+
+    ``` python
+    arcpy.management.CreateFeatureclass(
+        out_path=arcpy.env.workspace, 
+        out_name="feature_class_name"
+    )
+    ```
