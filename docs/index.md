@@ -1,34 +1,43 @@
 # Joel's Resource Page
 
-## Projects
+## Welcome
 
-- [Overture to ArcGIS](https://knu2xs.github.io/overture-to-arcgis/)
-- [H3 Origin-Destination Matrix](https://github.com/knu2xs/h3-origin-destination-matrix)
+This is a personal collection of technical resources, guides, and scripts I've developed while working on various GIS and technology projects—both professionally and in my own time. The documentation here serves as a knowledge base for solutions I've implemented, configurations I've worked through, and code snippets I've found useful.
 
-## Professional Services
+## What You'll Find Here
 
-- [MyPS Hub](https://myps-prof-services.hub.arcgis.com)
-- [Esri Professional Services on ArcGIS Online](https://prof-services.maps.arcgis.com/home/index.html)
-- [Pacific Delivery Center on ArcGIS Online](https://ps-pdc.maps.arcgis.com/home/index.html)
+This resource page is organized into several key areas:
 
-## References
+### Knowledge Base
+A collection of how-to guides and problem-solving documentation covering topics such as:
 
-- [Request Ed Services Course Materials](https://esriis.sharepoint.com/sites/EsriTrainingServices/Lists/Request%20for%20Digital%20Course%20Materials/AllItems.aspx)
-- [Aggregated Live Feed Community - Paul Dodd's Tools](https://www.arcgis.com/home/group.html?id=c42fd84aa35a4ab39806f6481b80c0a0#overview)
-- [ArcGIS Business Analyst Web Local](https://baportal.esri.com/portal/apps/BA/esriBAOnPrem/)
-- [ArcGIS Assistant (PS Beta)](https://assistant.esri-ps.com/)
-- [Esri Enterprise Cloud Services (ECS)](https://ecsprd.esri.com/)
-- [ArcGIS Pro Help (Development)](https://prodev.arcgis.com/en/pro-app/latest/help)
-- [Big Data Toolkit Documentation](https://esrips.github.io/bdt3/index.htm)
-- [Esri Managed File Tranfer (FTP) KB](https://esri.service-now.com/kb?id=kb_article_view&sysparm_article=KB0013194) (login using AVWorld credentials)
-- [Blog Writing Resources](https://esriis.sharepoint.com/sites/Productwriters/Shared%20Documents/Forms/AllItems.aspx?id=%2Fsites%2FProductwriters%2FShared%20Documents%2FGeneral&viewid=8ce552a9%2D103a%2D4ed7%2Da184%2D63d638edf6fb&csf=1&web=1&e=4lmiLV&CID=1a246fa1%2Db0d9%2D7000%2D5f63%2D056ce0341142&cidOR=SPO&FolderCTID=0x01200028E8F16D80BAB3488EB3BCD3F78C8A4F&ovuser=aee6e3c9%2D711e%2D4c7c%2Dbd27%2D04f2307db20d%2Cjoel5174%40esri%2Ecom&OR=Teams%2DHL&CT=1748550337383&clickparams=eyJBcHBOYW1lIjoiVGVhbXMtRGVza3RvcCIsIkFwcFZlcnNpb24iOiI1MC8yNTA1MDQwMTYyMCJ9)
-- [Esri Asset Share](https://esri.brand-portal.adobe.com/) (Brand > Emblems and Logos > Search for `.png`)
-- Business Analyst Content Deliveries on Redstorage1
+- **ArcGIS Development**: [Working with ArcGIS Pro](Knowledge_Base/add_h3_pro.md), custom Python environments, and H3 hexagonal indexing
+- **Cloud Development**: [Azure Functions setup](Knowledge_Base/azure_function_setup.md) and development workflows on macOS
+- **GIS Analysis**: [GeoAnalytics Engine code samples](Knowledge_Base/geoanalytics_snippets.md) and spatial analysis patterns
+- **Development Tools**: [Visual Studio Code remote SSH setup](Knowledge_Base/visual_studio_code_remote_ssh.md) and [iOS app development with ArcGIS](Knowledge_Base/ios_app_dev_arcgis_vscode.md)
+- **Enterprise GIS**: [Notebook server configurations](Knowledge_Base/notebook_server_60_percent.md) and performance optimizations
 
-## ArcGIS Online Resources
+### Enterprise Installation Guides
+Detailed instructions for deploying and configuring ArcGIS Enterprise systems, including:
 
-- [Vector Basemap Layers](https://adventure.maps.arcgis.com/home/group.html?sortField=title&sortOrder=asc&focus=layers&id=30de8da907d240a0bccd5ad3ff25ef4a#content)
+- [Custom Docker container images for ArcGIS Notebook Server](ArcGIS_Enterprise_Installation/create_custom_notebook_image.md)
+- Deployment on both Ubuntu and Windows platforms
+- Enterprise Container System (ECS) deployment information
 
-```
-\\redstorage1\ba-data-content-deliveries
-```
+### Scripts and Automation
+Practical shell and Python scripts for system administration tasks:
+
+- Certificate management for Esri systems
+- Web Adaptor installation automation
+- Log file management and rotation
+- Kerberos authentication setup for network mounts
+
+### Jupyter Notebooks
+Working examples and analytical workflows demonstrating:
+
+- [Spatial joins using H3 hexagonal indexing with GeoAnalytics](notebooks/0.20-intersect-h3-geoanalytics.ipynb)
+- Performance optimization techniques for large-scale geospatial analysis
+
+## Purpose
+
+These resources reflect real-world solutions to problems I've encountered. They're documented here both as a reference for my future self and to potentially help others working on similar challenges in the GIS and technology space.
