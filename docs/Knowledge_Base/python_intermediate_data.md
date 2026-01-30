@@ -148,7 +148,7 @@ References:
 
 !!! note
 
-    This example uses type hints for improved code clarity and the `Path` class from the `pathlib` module, which makes path manipulation much easier. The only difficulty is ArcPy cannot handle `Path` objects, so you have to convert `Path` objects back into strings before passing into any ArcPy functions.
+    This example uses type hints for improved code clarity and the `Path` class from the `pathlib` module, which makes path manipulation much easier. The only difficulty in using `Path` objecst is ArcPy cannot handle `Path` objects, so you have to convert `Path` objects back into strings before passing into any ArcPy functions.
 
     ``` python
     path_to_data = Path(r"C:\path\to.gdb\data")
@@ -273,11 +273,11 @@ if __name__ == '__main__':
     )
 ```
 
-!!! note
+!!! tip
 
     If a tool in your workflow requires the file geodatabase and output dataset (table or feature class) name as separate parameters, since the decorator with wraps sets the current workspace, you can provide the file geodatabase as `arcpy.env.workspace`.
 
-    For instance, the Create Feature Class tool requires specifying the geodatabase path and feature class names as separate parameters. In this case, you can specify the output geodatabase path as `arpcy.env.workspace`.
+    For instance, the Create Feature Class tool requires specifying the geodatabase path and the feature class name as separate parameters. In this case, you can specify the output geodatabase path as `arpcy.env.workspace`.
 
     ``` python
     arcpy.management.CreateFeatureclass(
