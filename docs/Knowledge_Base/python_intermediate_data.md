@@ -147,7 +147,13 @@ References:
 - [`pathlib.Path`](https://docs.python.org/3/library/pathlib.html)
 
 !!! note
-    This example uses type hints and the `Path` class from the `pathlib` module for improved code clarity. It also demonstrates using type hints for function arguments and return types.
+
+    This example uses type hints for improved code clarity and the `Path` class from the `pathlib` module, which makes path manipulation much easier. The only difficulty is ArcPy cannot handle `Path` objects, so you have to convert `Path` objects back into strings before passing into any ArcPy functions.
+
+    ``` python
+    path_to_data = Path(r"C:\path\to.gdb\data")
+    arcpy.DoSomething(str(path_to_data))
+    ```
 
 ``` python
 import os.path
