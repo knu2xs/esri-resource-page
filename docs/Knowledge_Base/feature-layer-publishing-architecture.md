@@ -239,7 +239,7 @@ Create a stable public item that references your view:
 
 !!! warning "Schema Changes Break Views"
 
-   Removing fields in the source data will prevent swapping between the blue and green sources, and also can break the view. If this happens, recreate the source blue and green source feature layers and the view. Then, point the public facing feature layer at the new view's layer URL.
+      Removing fields in the source data will prevent swapping between the blue and green sources, and also can break the view. If this happens, recreate the source blue and green source feature layers and the view. Then, point the public facing feature layer at the new view's layer URL.
 
 ### Step 2.2: Update Inactive Source Layer (Green)
 

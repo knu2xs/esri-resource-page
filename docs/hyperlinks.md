@@ -1,7 +1,6 @@
 # Hyperlinks
 
-!!! note
-    This is largely a list of bookmarks I want to have redily accessible. In all honesty, I seriously doubt you will find this very useful. Many of the links are only available on networks I have access to.
+This is largely a list of bookmarks I want to have redily accessible. In all honesty, I seriously doubt you will find this very useful. Many of the links are only available on networks I have access to.
 
 ## Projects
 
