@@ -41,15 +41,18 @@ Install the following extensions in Visual Studio Code:
 ### Step 3: Verify Installation
 
 1. Open Terminal and verify Xcode is properly configured:
-   ```bash
-   xcode-select -p
-   ```
-   Should output: `/Applications/Xcode.app/Contents/Developer`
+
+    ```bash
+    xcode-select -p
+    ```
+    
+    Should output: `/Applications/Xcode.app/Contents/Developer`
 
 2. Verify Swift is available:
-   ```bash
-   swift --version
-   ```
+
+    ```bash
+    swift --version
+    ```
 
 ## Part 2: Create a New iOS Project with ArcGIS Swift API
 
@@ -61,12 +64,12 @@ Since VS Code doesn't have a built-in iOS project generator, we'll create the in
 2. Select **File → New → Project**
 3. Choose **iOS → App**
 4. Configure your project:
-   - **Product Name**: `ArcGISMapApp`
-   - **Team**: Select your Apple Developer account (or leave as "None" for simulator-only testing)
-   - **Organization Identifier**: Use a reverse domain (e.g., `com.yourname`)
-   - **Interface**: **SwiftUI**
-   - **Language**: **Swift**
-   - **Uncheck** "Include Tests" (optional)
+    - **Product Name**: `ArcGISMapApp`
+    - **Team**: Select your Apple Developer account (or leave as "None" for simulator-only testing)
+    - **Organization Identifier**: Use a reverse domain (e.g., `com.yourname`)
+    - **Interface**: **SwiftUI**
+    - **Language**: **Swift**
+    - **Uncheck** "Include Tests" (optional)
 5. Save the project to your desired location
 6. Close Xcode
 
@@ -248,27 +251,31 @@ The ArcGIS Swift SDK is distributed via Swift Package Manager.
 #### If you used Option A (Xcode):
 
 1. Open your project in VS Code:
-   ```bash
-   code /path/to/ArcGISMapApp
-   ```
+
+    ```bash
+    code /path/to/ArcGISMapApp
+    ```
 
 2. Open the Xcode project file in Xcode temporarily to add the package:
-   ```bash
-   open ArcGISMapApp.xcodeproj
-   ```
+
+    ```bash
+    open ArcGISMapApp.xcodeproj
+    ```
 
 3. In Xcode, go to **File → Add Package Dependencies**
 
 4. In the search bar, enter:
-   ```
-   https://github.com/Esri/arcgis-maps-sdk-swift
-   ```
+
+    ```
+    https://github.com/Esri/arcgis-maps-sdk-swift
+    ```
 
 5. Select the package and click **Add Package**
 
 6. Choose the following products to add:
-   - **ArcGIS** (main SDK)
-   - **ArcGISToolkit** (optional, for additional UI components)
+
+    - **ArcGIS** (main SDK)
+    - **ArcGISToolkit** (optional, for additional UI components)
 
 7. Click **Add Package**
 
@@ -281,37 +288,40 @@ The dependency was already added in your `project.yml` file! The ArcGIS SDK will
 ### Step 3: Configure VS Code for the Project
 
 1. Open the project folder in VS Code:
-   ```bash
-   cd /path/to/ArcGISMapApp
-   code .
-   ```
+
+    ```bash
+    cd /path/to/ArcGISMapApp
+    code .
+    ```
 
 2. Open the **Sweetpad** panel in VS Code (left sidebar)
 
 3. If your project isn't automatically detected, manually select it:
-   - Click on the Sweetpad icon
-   - Browse to your `.xcodeproj` file
+    - Click on the Sweetpad icon
+    - Browse to your `.xcodeproj` file
 
 4. This will create `.vscode/settings.json`:
-   ```json
-   {
-       "sweetpad.build.xcodeWorkspacePath": "ArcGISMapApp.xcodeproj/project.xcworkspace"
-   }
-   ```
+
+    ```json
+    {
+        "sweetpad.build.xcodeWorkspacePath": "ArcGISMapApp.xcodeproj/project.xcworkspace"
+    }
+    ```
 
 5. **Reload VS Code** (`Cmd + Shift + P` → "Developer: Reload Window")
 
 6. Generate the build server configuration:
-   - Open Command Palette (`Cmd + Shift + P`)
-   - Type "Sweetpad: Generate Build Server Config"
-   - Select your project target
+
+    - Open Command Palette (`Cmd + Shift + P`)
+    - Type "Sweetpad: Generate Build Server Config"
+    - Select your project target
 
 This creates a `buildServer.json` file in your project root.
 
 7. Build the project to verify setup:
-   - Open Command Palette (`Cmd + Shift + P`)
-   - Run "Sweetpad: Build Without Run"
-   - Wait for the build to complete (this resolves dependencies)
+    - Open Command Palette (`Cmd + Shift + P`)
+    - Run "Sweetpad: Build Without Run"
+    - Wait for the build to complete (this resolves dependencies)
 
 ### Step 4: Configure Debug Settings
 
@@ -353,18 +363,21 @@ This creates a `buildServer.json` file in your project root.
    ```
 
    **Map ID Configuration:**
-   - Replace the map ID value with an actual ArcGIS Online map ID
-   - Example IDs:
-     - `41281c51f9de45edaf1c8ed44bb10e30` - Topographic
-     - `d5e02a0c1f2b4ec399823fdd3c2fdebd` - Streets
-     - `7dc6cea0b1764a1f9af2e679f642f0f5` - Imagery
-   - Or create your own map at [https://www.arcgis.com](https://www.arcgis.com)
+
+    - Replace the map ID value with an actual ArcGIS Online map ID
+    - Example IDs:
+
+        - `41281c51f9de45edaf1c8ed44bb10e30` - Topographic
+        - `d5e02a0c1f2b4ec399823fdd3c2fdebd` - Streets
+        - `7dc6cea0b1764a1f9af2e679f642f0f5` - Imagery
+    - Or create your own map at [https://www.arcgis.com](https://www.arcgis.com)
 
    **API Key Configuration:**
-   - Get an API key from [https://developers.arcgis.com](https://developers.arcgis.com)
-   - Replace `YOUR-API-KEY-HERE` with your actual API key
-   - For development/testing with **public maps only**, you can leave this as-is or use an empty string
-   - For production apps or accessing secured services, a valid API key is required
+
+    - Get an API key from [https://developers.arcgis.com](https://developers.arcgis.com)
+    - Replace `YOUR-API-KEY-HERE` with your actual API key
+    - For development/testing with **public maps only**, you can leave this as-is or use an empty string
+    - For production apps or accessing secured services, a valid API key is required
 
 3. To support location services (optional), add this key:
    ```xml
@@ -465,6 +478,7 @@ struct ArcGISMapAppApp: App {
 ```
 
 **How this works:**
+
 - The app reads the `ArcGISAPIKey` value from `Info.plist` at launch
 - If a valid API key is found (not empty or placeholder), it configures the ArcGIS environment
 - For development with public maps, you can skip configuring an API key
@@ -477,8 +491,9 @@ struct ArcGISMapAppApp: App {
 1. Press **F5** or click the **Run** button in the Debug panel
 
 2. Select the target device:
-   - Choose an iOS simulator from the Sweetpad panel
-   - Or connect a physical device (requires Apple Developer account)
+
+    - Choose an iOS simulator from the Sweetpad panel
+    - Or connect a physical device (requires Apple Developer account)
 
 3. The app will build, launch, and the debugger will attach
 
@@ -512,11 +527,13 @@ To use a different map or update your API key, simply modify the values in `Info
 4. Rebuild and run the app
 
 Example map IDs to try:
+
 - `41281c51f9de45edaf1c8ed44bb10e30` - Topographic
 - `d5e02a0c1f2b4ec399823fdd3c2fdebd` - Streets
 - `7dc6cea0b1764a1f9af2e679f642f0f5` - Imagery
 
 **Note**: Keeping configuration values in `Info.plist` makes it easy to change settings without modifying code, which is especially useful for:
+
 - Switching between development and production API keys
 - Testing different maps
 - Managing app configurations across different environments
@@ -539,19 +556,23 @@ Example map IDs to try:
 ### Common Issues
 
 **Issue**: "No bundle URL present" error
+
 - **Solution**: Clean build folder and rebuild
 
 **Issue**: ArcGIS SDK not found
+
 - **Solution**: Ensure package was added via Xcode's Package Dependencies
 - Verify `Package.swift` or project file includes the dependency
 
 **Issue**: Simulator doesn't launch
+
 - **Solution**: Ensure Xcode Command Line Tools are set correctly:
-  ```bash
-  sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
-  ```
+    ```bash
+    sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+    ```
 
 **Issue**: Map doesn't load
+
 - **Solution**: Check the map ID in `Info.plist` is valid
 - Ensure internet connectivity (maps load from ArcGIS Online)
 

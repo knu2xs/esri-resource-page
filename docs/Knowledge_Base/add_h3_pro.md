@@ -6,7 +6,8 @@ Adding H3 to ArcGIS Pro requires creating a new cloned Conda environment, a copy
 
 Start by opening up the Python Command Promptby going to **Start > Programs > ArcGIS > Python Command Prompt**. This opens up a Windows  commannd prompt with Conda added to the paths so commands work.
 
-**NOTE:** In this example, I name the new environment `arcgis`. Please feel free to use any other name you wish. This is only my convention.
+!!! note
+    In this example, I name the new environment `arcgis`. Please feel free to use any other name you wish. This is only my convention.
 
 ### Clone `arcgispro-py3`
 

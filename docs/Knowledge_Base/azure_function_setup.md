@@ -144,15 +144,16 @@ code --install-extension ms-python.python
 4. Choose **Python** as the language
 5. Select your Python interpreter (from your conda environment)
 6. Choose a template for your first function:
-   - **HTTP trigger** - responds to HTTP requests
-   - **Timer trigger** - runs on a schedule
-   - **Blob trigger** - processes blob storage events
-   - And more...
+    - **HTTP trigger** - responds to HTTP requests
+    - **Timer trigger** - runs on a schedule
+    - **Blob trigger** - processes blob storage events
+    - And more...
+
 7. Provide a function name
 8. For HTTP trigger, select authorization level:
-   - **Anonymous** - no authentication required
-   - **Function** - requires a function key
-   - **Admin** - requires a master key
+    - **Anonymous** - no authentication required
+    - **Function** - requires a function key
+    - **Admin** - requires a master key
 
 ### Project Structure
 
@@ -180,31 +181,31 @@ MyFunctionApp/
 
 1. **Create and activate a conda environment**:
 
-   ```bash
-   # Create a new conda environment with Python 3.11
-   conda create -n azurefunctions python=3.11
-   
-   # Activate the environment
-   conda activate azurefunctions
-   ```
+    ```bash
+    # Create a new conda environment with Python 3.11
+    conda create -n azurefunctions python=3.11
+    
+    # Activate the environment
+    conda activate azurefunctions
+    ```
 
 2. **Install dependencies**:
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+    ```bash
+    pip install -r requirements.txt
+    ```
 
 3. **Configure VS Code to use the conda environment**:
-   - Press `⌘+Shift+P` and select `Python: Select Interpreter`
-   - Choose the conda environment you created (e.g., `Python 3.11.x ('azurefunctions')`)
+    - Press `⌘+Shift+P` and select `Python: Select Interpreter`
+    - Choose the conda environment you created (e.g., `Python 3.11.x ('azurefunctions')`)
 
 4. **Start the function app**:
 
-   ```bash
-   func start
-   ```
+    ```bash
+    func start
+    ```
 
-   Or press `F5` in VS Code to start debugging
+    Or press `F5` in VS Code to start debugging
 
 5. **Test the function**: The terminal will show the local URL (typically `http://localhost:7071/api/your-function-name`)
 
@@ -216,10 +217,11 @@ MyFunctionApp/
 2. Select your subscription
 3. Choose to create a new Function App or select an existing one
 4. Follow the prompts to configure:
-   - Globally unique name
-   - Runtime (Python 3.11)
-   - Region
-   - Operating system (Linux)
+
+    - Globally unique name
+    - Runtime (Python 3.11)
+    - Region
+    - Operating system (Linux)
 
 #### Using Azure CLI
 

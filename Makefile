@@ -22,7 +22,7 @@ docs:
 	conda run -p ./env zensical build
 
 docserve:
-	conda run -p ./env zensical serve
+	conda run -p ./env --no-capture-output zensical serve
 
 ## Build the local environment from the environment file
 env:

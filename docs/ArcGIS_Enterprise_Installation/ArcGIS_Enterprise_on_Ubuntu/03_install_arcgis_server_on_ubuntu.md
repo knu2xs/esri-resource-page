@@ -275,10 +275,10 @@ Reference: [Federate ArcGIS Server with Portal for ArcGIS](https://enterprise.ar
 2. Navigate to `Organization` > `Settings` > `Servers` tab. Click on `Add Server` and select `ArcGIS Server`.
 
 3. In the `Add ArcGIS Server` dialog, provide the following information follwing these patterns.
-   
-   - Service URL: `https://webadaptor.domain.com/server` (web adaptor URL)
-   - Administration URL: `https://server.domain.com:6443/arcgis` (direct server URL)
-   - Provide the `serveradmin` username and password created during the ArcGIS Server installation.
+    
+    - Service URL: `https://webadaptor.domain.com/server` (web adaptor URL)
+    - Administration URL: `https://server.domain.com:6443/arcgis` (direct server URL)
+    - Provide the `serveradmin` username and password created during the ArcGIS Server installation.
 
 !!! note "Server Role"
 

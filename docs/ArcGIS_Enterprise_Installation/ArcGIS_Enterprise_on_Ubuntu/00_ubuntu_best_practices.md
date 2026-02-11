@@ -84,7 +84,7 @@ Reference: [systemd.exec - User/Group Execution](https://man7.org/linux/man-page
 
 Setting up dedicated users for running applications as services (**service users**) enhances security and ensures proper file permissions. Services run as dedicated user accounts, limiting access to only the necessary files and directories used by the applications.
 
-Two user accounts are used in the installation of ArcGIS Enterprise on Ubuntu: `tomcat` and `arcgis`. Tomcat assets are owned by the `tomcat` user and group. The `tomcat` user is used to run the Tomcat service. Similarly, ArcGIS Enterprise assets are owned by the `arcgis` user and group, and all ArcGIS Enterprise services run as the `arcgis` user.
+Two user accounts are used in the installation of ArcGIS Enterprise on Ubuntu: `web-services` and `arcgis`. Tomcat assets are owned by the `web-services` user and group. The `web-services` user is used to run the Tomcat service, and when Nginx is used as a reverse proxy to Tomcat, Nginx runs as this user as well. Similarly, ArcGIS Enterprise assets are owned by the `arcgis` user and group, and all ArcGIS Enterprise services run as the `arcgis` user.
 
 ### Creating Users
 
@@ -173,7 +173,7 @@ If being completely neuritic, I would break out the where to store resources in 
 
 Reference: [Filesystem Hierarchy Standard - /opt](https://refspecs.linuxbase.org/FHS_3.0/fhs-3.0.html#OPT)
 
-Optional software such as ArcGIS Enterprise components are installed in the `/opt` directory. This keeps them separate from the base operating system files and allows for easier management and upgrades. Tomcat is installed in `/opt/tomcat`. As a secondary heirarchy, all installed Esri software is located in `/opt/arcgis`. Hence, ArcGIS Server is installed in `/opt/arcgis/server`, Portal for ArcGIS in `/opt/arcgis/portal`, and ArcGIS Data Store in `/opt/arcgis/datastore`.
+Optional software such as ArcGIS Enterprise components are installed in the `/opt` directory. This keeps them separate from the base operating system files and allows for easier management and upgrades. Tomcat is installed in `/opt/tomcat` and is owned by the `web-services` user. As a secondary heirarchy, all installed Esri software is located in `/opt/arcgis`. Hence, ArcGIS Server is installed in `/opt/arcgis/server`, Portal for ArcGIS in `/opt/arcgis/portal`, and ArcGIS Data Store in `/opt/arcgis/datastore`.
 
 ### Variable Data for Optional Software: `/var/opt`
 
@@ -224,13 +224,13 @@ Ubuntu uses `systemd` as its init system to manage services, processes, and syst
 
 ### Unit Files
 
-Service unit files are located in `/etc/systemd/system`. Tomcat and the respective ArcGIS Enterprise components are all configured to start at boot as `systemd` services. The service files are either explicitly created (Tomcat) or copied from installation resources (ArcGIS Enterprise components), and subsequently enabled during a manual step in the installation process.
+Service unit files are located in `/etc/systemd/system`. Tomcat and the respective ArcGIS Enterprise components are all configured to start at boot as `systemd` services. The service files are either explicitly created (Tomcat) or copied from installation resources (ArcGIS Enterprise components), and subsequently enabled during a manual step in the installation process. Tomcat runs under the `web-services` user, while ArcGIS components run under the `arcgis` user.
 
 #### User Context
 
 Each service is configured to run under its respective user account. This ensures services have the appropriate permissions to access the necessary files and directories while maintaining security isolation by not running as the root user. 
 
-For instance, Tomcat is configured to run under the `tomcat` user and group. Similarly, each ArcGIS service is configured to run under the `arcgis` user and group.
+For instance, Tomcat is configured to run under the `web-services` user and group. Similarly, each ArcGIS service is configured to run under the `arcgis` user and group.
 
 This is specified in the service unit files using the `User=` and `Group=` directives. For example, here is a snippet from a hypothetical ArcGIS Server service file (the real file is _much_ longer and more complex).
 

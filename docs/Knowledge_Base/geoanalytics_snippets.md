@@ -26,15 +26,15 @@ spark = SparkSession.getActiveSession()
 
 # read in the data frame
 df = (spark.read.parquet(pqt_pth)
-      .withColumn(
-          colName=geom_col, 
-          col=fns_ga.point(
-              x=coord_x_col, 
-              y=coord_y_col,
-              sr=4326
-          )
-     )
-     .st.set_geometry_field(geom_col)
+    .withColumn(
+        colName=geom_col, 
+        col=fns_ga.point(
+            x=coord_x_col, 
+            y=coord_y_col,
+            sr=4326
+        )
+    )
+    .st.set_geometry_field(geom_col)
 )
 ```
 

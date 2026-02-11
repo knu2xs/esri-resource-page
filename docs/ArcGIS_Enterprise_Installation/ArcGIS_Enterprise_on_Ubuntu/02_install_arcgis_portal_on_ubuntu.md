@@ -53,7 +53,7 @@ sudo mkdir -p /opt/arcgis/portal
 sudo chown arcgis:arcgis /opt/arcgis/portal
 sudo chmod 750 /opt/arcgis/portal
 sudo mkdir -p /var/opt/arcgis/portal/content
-sudo chown arcgis:arcgis /var/opt/arcgis
+sudo chown -R arcgis:arcgis /var/opt/arcgis
 sudo chmod 750 /var/opt/arcgis
 sudo mkdir -p /etc/opt/arcgis/portal
 sudo chown root:arcgis /etc/opt/arcgis
@@ -73,8 +73,16 @@ df -h /opt
 There needs to be at least 20 GB of free space to install Portal for ArcGIS. If there is not enough space, extend the logical volume. When installing, I discovered only 20GB is allocated by default, so I extended it by an additional 10GB to have enough capacity.
 
 ``` bash
-sudo lvextend -L +10G /opt --resizefs
+sudo lvextend -L +10G /dev/mapper/vg_os-lv_opt --resizefs
 ```
+
+!!! note "Discover Logical Volume Manager (LVM) Path"
+
+    `lvextend` requires the actual volume path, not the mount point `/opt`. You can discover the LVM path using the following command.
+
+    ``` bash
+    df -hT /opt
+    ```
 
 Since we are going to be using the `/var` volume for Portal data, also check the available space on the `/var` volume.
 
@@ -85,7 +93,7 @@ df -h /var
 There should to be at least 50 GB of free space on the `/var` volume to accommodate Portal data. If there is not enough space, extend the logical volume and resize the filesystem.
 
 ``` bash
-sudo lvextend -L +20G /var --resizefs
+sudo lvextend -L +20G /dev/mapper/vg_os-lv_var --resizefs
 ```
 
 ### Set File Handle Limits
@@ -127,10 +135,20 @@ tar xvf /tmp/Portal_for_ArcGIS_Linux_*.tar.gz -C /tmp
 
 ### Install Portal for ArcGIS
 
+??? warning "If Installing with Tomcat"
+
+    If installing ArcGIS Portal on the same instance as Tomcat using the preceding instructions, the `/opt/arcgis` directory, where we are installing Portal, will be owned by `web-services`. This means the following command will not work. Fortunately, all you have to do is add the `web-services` user to the `arcgis` group, and change the ownership to `arcgis` for everything to work.
+
+    ``` bash
+    sudo usermod -aG arcgis web-services
+    sudo chown -R arcgis:arcgis /opt/arcgis
+    sudo systemctl restart tomcat
+    ```
+
 Run the Portal for ArcGIS installer as the `arcgis` user. Use `sudo -u arcgis` to run the command as the `arcgis` user without changing the shell:
 
 ``` bash
-sudo -u arcgis /tmp/PortalforArcGIS/Setup -m silent -l yes -d /opt/arcgis/portal -v
+sudo -u arcgis /tmp/PortalForArcGIS/Setup -m silent -l yes -d /opt/arcgis/portal -v
 ```
 
 - `sudo -u arcgis` — Runs the following command as the `arcgis` user
@@ -149,18 +167,9 @@ Start by copying the service file provided by the installer to `/etc/systemd/sys
 sudo cp /opt/arcgis/portal/framework/etc/arcgisportal.service /etc/systemd/system/
 ```
 
-Next, check to ensure the unit file will run as the `arcgis` user. Open the service file in a text editor.
+!!! note "ArcGIS Portal Service Runs as `arcgis`"
 
-``` bash
-sudo nano /etc/systemd/system/arcgisportal.service
-```
-
-Ensure the following lines are present in the `[Service]` section:
-
-``` ini
-User=arcgis
-Group=arcgis
-```
+    Part of the installation is ensuring the service runs as the same user installing ArcGIS Portal. Hence, the ArcGIS Portal service will run as the `arcgis` user.
 
 Now, set the correct ownership and permissions on the unit file.
 
@@ -184,46 +193,6 @@ sudo systemctl status arcgisportal.service --no-pager
 ```
 
 The status will either be `active (running)` if everything is functioning properly, or `failed` if there are issues that need to be addressed.
-
-## Move Log Files to `var/opt/arcgis/portal/logs`
-
-By default, Portal for ArcGIS stores its log files in the installation directory under `/opt/arcgis/portal/logs`. To follow best practices and keep variable data in `/var/opt`, we will move the log files to `/var/opt/arcgis/portal/logs` and create a symbolic link.
-
-First, stop the Portal for ArcGIS service.
-
-``` bash
-sudo systemctl stop arcgisportal.service
-```
-
-Create the new logs directory in `/var/opt`.
-
-``` bash
-sudo mkdir -p /var/opt/arcgis/portal/logs
-sudo chown -R arcgis:arcgis /var/opt/arcgis/portal/logs
-sudo chmod 750 /var/opt/arcgis/portal/logs
-```
-
-Start the Portal for ArcGIS service again.
-
-
-``` bash
-sudo systemctl start arcgisportal.service
-```
-
-Use the REST API to update the log location in Portal for ArcGIS. Run the following command, replacing the placeholders with your actual values.
-
-``` bash
-sudo -u arcgis /opt/arcgis/portal/tools/portaladmin.sh updateportalproperties --properties logDir=/var/opt/arcgis/portal/logs --username portaladmin --password P@ssw0rd
-```
-
-Move the existing log files to the new location, ensure permissions are correctly set and remove the old logs directory.
-
-``` bash
-sudo mv /opt/arcgis/portal/logs/* /var/opt/arcgis/portal/logs/
-sudo chown -R arcgis:arcgis /var/opt/arcgis/portal/logs
-sudo chmod -R 750 /var/opt/arcgis/portal/logs
-sudo rmdir /opt/arcgis/portal/logs
-```
 
 ## Create Portal Site
 
@@ -253,20 +222,20 @@ Next, we need to create the ArcGIS Portal site. This can be done using the comma
  Run the following command on the Portal server, replacing the placeholders with your actual values. The content directory is set to `/var/opt/arcgis/portal/content` based on the best practices for where the content directory should be located, in `/var/opt` since containing variable data for optional software.
 
 ``` bash
-/opt/arcgis/portal/tools/createportalsite.sh \
+sudo /opt/arcgis/portal/tools/createportal/createportal.sh \
     -fn Admin \
     -ln Hefe \
     -u portaladmin \
-    -p P@ssw0rd \
+    -p K3mosabe \
     -e nobody@nowhere.com \
     -qi 1 \
     -qa Metropolis \
     -d /var/opt/arcgis/portal/content \
-    -lf /tmp/*.ecp \
-    -ut creatorUT \
+    -lf /tmp/portal_license.json \
+    -ut creatorUT
 ```
 
-!!! note "Create Site Parameters"
+??? note "Create Site Parameters"
 
     Parameters for the `createportalsite.sh` script:
 
@@ -304,9 +273,32 @@ Next, we need to create the ArcGIS Portal site. This can be done using the comma
     | 13 | What is your dream job? |
     | 14 | Where did you go on your first date? |
 
-### Create Portal Site Using Web Interface
+## Move Log Files to `var/opt/arcgis/portal/logs`
 
-Open a web browser and navigate to `https://<portal_hostname>:7443/portal/webadaptor`. Follow the prompts to create the initial site, making the content directory `/var/opt/arcgis/portal/content`, and setting credentials for the initial administrator account.
+By default, Portal for ArcGIS stores its log files in the installation directory under `/opt/arcgis/portal/logs`. To follow best practices and keep variable data in `/var/opt`, we will move the log files to `/var/opt/arcgis/portal/logs` and create a symbolic link.
+
+Create the new logs directory in `/var/opt`.
+
+``` bash
+sudo mkdir -p /var/opt/arcgis/portal/logs
+sudo chown -R arcgis:arcgis /var/opt/arcgis/portal/logs
+sudo chmod 750 /var/opt/arcgis/portal/logs
+```
+
+Use the REST API to update the log location using the script installed in tools with Portal.
+
+``` bash
+sudo -u arcgis /opt/arcgis/portal/tools/portaladmin.sh updateportalproperties --properties logDir=/var/opt/arcgis/portal/logs --username portaladmin --password P@ssw0rd
+```
+
+Move the existing log files to the new location, ensure permissions are correctly set and remove the old logs directory.
+
+``` bash
+sudo mv /opt/arcgis/portal/logs/* /var/opt/arcgis/portal/logs/
+sudo chown -R arcgis:arcgis /var/opt/arcgis/portal/logs
+sudo chmod -R 750 /var/opt/arcgis/portal/logs
+sudo rmdir /opt/arcgis/portal/logs
+```
 
 ## Configure Portal for ArcGIS Web Adaptor
 

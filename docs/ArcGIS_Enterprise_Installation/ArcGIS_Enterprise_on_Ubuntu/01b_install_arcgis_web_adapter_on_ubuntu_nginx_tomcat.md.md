@@ -6,15 +6,36 @@ Reference: [System Requirements](https://enterprise.arcgis.com/en/web-adaptor/la
 
 This guide implements a **reverse proxy architecture** using **Nginx** as the front-end web server with **Tomcat** as the back-end application server hosting the ArcGIS Web Adapters.
 
+### Architecture Diagram
+
+```mermaid
+flowchart LR
+    Internet["🌐 Internet<br/>(External Clients)"]
+    Nginx["Nginx<br/>Port 443<br/>(SSL/TLS)"]
+    Tomcat["Tomcat<br/>Port 8080<br/>(HTTP, localhost only)"]
+    WebAdapters["ArcGIS Web Adapters<br/>(Portal & Server)"]
+    
+    Internet --> |HTTPS| Nginx
+    Nginx --> |HTTP<br/>127.0.0.1:8080| Tomcat
+    Tomcat --> WebAdapters
+    
+    style Internet fill:#E8F4F8,stroke:#4A90E2,stroke-width:2px
+    style Nginx fill:#7ED321,stroke:#5A9E19,stroke-width:3px,color:#fff
+    style Tomcat fill:#F5A623,stroke:#C17F1A,stroke-width:2px,color:#fff
+    style WebAdapters fill:#BD10E0,stroke:#8B0BA8,stroke-width:2px,color:#fff
+```
+
+This architecture follows security best practices by implementing defense in depth with multiple layers of protection. Requests are received over https on port 443, routed internally to Tomcat on port 8080 (default Tomcat port). Tomcat is running the ArcGIS Web Adapters as applications handing the ArcGIS specific needs for routing traffic to the respective ArcGIS Servers. Each ArcGIS Web Adapter installed has a specifc name such as portal and server, and are accessed at the same URL on different paths. In the aforementioned case of portal and server, this will be `https://webserver.domain.com/portal` and `https://webserver.domain.com/server`.
+
 ### Why Use Nginx + Tomcat Instead of Standalone Tomcat?
 
 **Security Benefits:**
 
-- **SSL/TLS Termination**: Nginx handles SSL/TLS encryption/decryption, offloading this resource-intensive task from Tomcat
-- **Attack Surface Reduction**: Only Nginx is exposed to the internet; Tomcat runs on localhost, isolated from direct external access
-- **Security Headers**: Nginx easily adds modern security headers (HSTS, CSP, X-Frame-Options, etc.)
-- **DDoS Protection**: Nginx provides built-in rate limiting and connection throttling
-- **Request Filtering**: Nginx can block malicious requests before they reach Tomcat
+- **SSL/TLS Termination**: Nginx handles SSL/TLS encryption/decryption, offloading this resource-intensive task from Tomcat. Nginx is significantly more efficient at SSL/TLS processing than Tomcat due to its optimized C-based implementation and native OpenSSL integration, resulting in lower CPU usage and better performance under high connection loads.
+- **Attack Surface Reduction**: Only Nginx is exposed to the internet; Tomcat runs on localhost (127.0.0.1), completely isolated from direct external access. This defense-in-depth architecture means attackers cannot directly exploit Tomcat vulnerabilities, bypass web application firewalls, or probe Tomcat's management interfaces. Even if Nginx is compromised, the attacker still faces the localhost barrier, and any Tomcat-specific attacks must pass through Nginx's filtering and validation layers first.
+- **Security Headers**: Nginx easily adds modern security headers (HSTS, CSP, X-Frame-Options, X-Content-Type-Options) with simple configuration directives, whereas implementing these in Tomcat requires complex filter configurations or application-level code changes. This includes HTTP Strict Transport Security to prevent protocol downgrade attacks, Content Security Policy to mitigate XSS attacks, clickjacking protection, and MIME-type sniffing prevention—all centrally managed in one location.
+- **DDoS Protection**: Nginx provides built-in rate limiting and connection throttling that can restrict requests per IP address, limit concurrent connections, and enforce request size limits. This prevents resource exhaustion attacks from overwhelming your Tomcat instances by filtering malicious traffic at the network edge before it reaches your application servers.
+- **Request Filtering**: Nginx can block malicious requests before they reach Tomcat by validating HTTP methods, filtering suspicious User-Agent strings, blocking known attack patterns (SQL injection, XSS), and implementing geographic restrictions. This significantly reduces the attack surface and computational load on Tomcat.
 
 **Performance Benefits:**
 
@@ -25,19 +46,48 @@ This guide implements a **reverse proxy architecture** using **Nginx** as the fr
 
 **Operational Benefits:**
 
-- **Zero-Downtime Deployments**: Update Tomcat without affecting Nginx; users experience no downtime
-- **Load Balancing**: Easily scale to multiple Tomcat instances behind a single Nginx proxy
-- **Centralized Logging**: All access logs consolidated in one place
-- **Industry Standard**: Nginx is the de facto standard for reverse proxy deployments
-- **Simplified Certificate Management**: SSL certificates managed in one location (Nginx) rather than multiple Tomcat connectors
+- **Zero-Downtime Deployments**: Update, patch, or restart Tomcat instances without service interruption. Nginx continues serving requests while Tomcat is offline, can gracefully drain connections, and seamlessly redirect traffic during maintenance windows. This enables frequent updates and rapid rollback capabilities without scheduling maintenance windows or notifying users, significantly improving system availability and reducing operational risk during deployments.
+- **Load Balancing**: Easily scale horizontally by adding multiple Tomcat instances behind a single Nginx proxy. Nginx distributes requests across backend servers, performs health checks to route traffic only to healthy instances, and automatically removes failed servers from the pool. This enables elastic scaling to handle traffic spikes, improves fault tolerance, and allows capacity planning based on actual demand without architecture changes.
+- **Centralized Logging**: All client access logs are consolidated in Nginx (single point of entry), providing complete visibility into all requests, simplified log analysis and monitoring, and consistent log formatting. This eliminates the need to aggregate logs from multiple Tomcat instances, simplifies security auditing and compliance reporting, and makes troubleshooting much easier with a single source of truth for all access patterns.
+- **Industry Standard**: Nginx is the de facto standard for reverse proxy deployments worldwide, meaning extensive community support, battle-tested reliability from millions of production deployments, abundant documentation and troubleshooting resources, and widespread expertise among system administrators. This architecture's long-term viability and support is well established as an industry standard.
+- **Simplified Certificate Management**: SSL certificates are managed in one location (Nginx configuration) rather than distributed across multiple Tomcat connectors or application servers. This centralization means certificate renewals (including Let's Encrypt automation) only need to happen once, cipher suite and TLS protocol updates are applied uniformly across all services, and there's no need to restart application servers for certificate changes—significantly reducing complexity and eliminating common sources of SSL/TLS configuration errors.
 
-### Architecture Diagram
+### Why Use ArcGIS Web Adapters Instead of Direct Nginx Proxy?
 
-```
-Internet → Nginx (Port 443, SSL/TLS) → Tomcat (Port 8080, HTTP, localhost only) → ArcGIS Web Adapters
-```
+Esri documents two approaches for exposing ArcGIS Enterprise through HTTPS: **(1) using Web Adapters behind a reverse proxy** (this guide), or **(2) configuring a reverse proxy directly to ArcGIS Server and Portal** (bypassing Web Adapters). Both configurations are supported, but the Web Adapter approach offers significant operational and architectural advantages.
 
-This architecture follows security best practices by implementing defense in depth with multiple layers of protection.
+**References:**
+
+- [Using a reverse proxy with Portal for ArcGIS](https://enterprise.arcgis.com/en/portal/latest/administer/linux/using-a-reverse-proxy-server-with-portal-for-arcgis.htm)
+- [Using a reverse proxy with ArcGIS Server](https://enterprise.arcgis.com/en/server/latest/administer/linux/using-a-reverse-proxy-server-with-arcgis-server.htm)
+- [ArcGIS Web Adaptor](https://enterprise.arcgis.com/en/web-adaptor/latest/install/java-linux/welcome-arcgis-web-adaptor-install-guide.htm)
+
+**Advantages of Web Adapters:**
+
+- **Simplified Configuration**: Web Adapters handle complex URL rewriting and request routing automatically through a configuration wizard (`/webadaptor/config`). Direct proxy configurations require manual mapping of dozens of REST endpoints, WebSocket paths, and context-specific routes that must be maintained across upgrades.
+
+- **Built-in URL Translation**: Web Adapters automatically translate external URLs (`https://server.com/portal`) to internal ArcGIS REST endpoints (`http://internal:7443/arcgis/sharing/rest`) with proper context path handling, query parameter preservation, and response body URL rewriting. This eliminates the need to write and maintain complex proxy rewrite rules.
+
+- **Simplified Web-Tier Authentication**: Web Adapters provide native integration with web-tier authentication mechanisms (IWA, PKI, SAML) through the configuration interface. Setting up web-tier authentication with direct proxy requires manual header configuration, token management, and custom authentication flow implementation.
+
+- **Automatic Configuration Updates**: When ArcGIS components change (upgrades, configuration changes, new services), Web Adapters automatically adjust their routing and URL mapping. Direct proxy configurations require manual review and updates to proxy rules after each change.
+
+- **High Availability Support**: Web Adapters include built-in logic for multi-machine Portal deployments and federated Server sites, handling session affinity, health checks, and failover automatically. Replicating this with raw proxy configuration requires significant custom development.
+
+- **Consistent Support Experience**: Esri's technical support, documentation examples, and troubleshooting guides assume Web Adapter deployment. While direct proxy configurations are documented, the vast majority of support resources, community knowledge, and tested upgrade paths focus on Web Adapter architectures.
+
+- **Configuration Validation**: Web Adapters validate the connection to ArcGIS components during registration, checking certificates, ports, and connectivity before going into production. This catches configuration errors early rather than during production use.
+
+- **Reduced Maintenance Burden**: Web Adapters are maintained and updated by Esri as part of the ArcGIS Enterprise release cycle. Proxy rules must be maintained by administrators and tested with each new ArcGIS release to ensure compatibility with API changes.
+
+**When Direct Proxy Might Be Preferred:**
+
+- You have an existing reverse proxy infrastructure with strict standardization requirements
+- You need custom request/response transformations beyond what Web Adapters provide
+- You're using a reverse proxy platform that Web Adapters don't support (e.g., cloud-native load balancers)
+- You want to completely eliminate the Tomcat/Java dependency from your infrastructure
+
+**Summary**: Both approaches are valid and supported by Esri. This guide uses Web Adapters because they significantly reduce configuration complexity, provide automatic ArcGIS-specific integration, and align with the most common deployment pattern in the ArcGIS community. The combination of **Nginx** (SSL/TLS, security, performance) + **Tomcat** (application server) + **Web Adapters** (ArcGIS integration) delivers a production-ready architecture with minimal ongoing maintenance.
 
 ## Update System Packages
 
@@ -73,10 +123,10 @@ sudo ufw enable
 
 ## Service User
 
-Create a user and group for both `tomcat` that will own and run the Tomcat service.
+Create a user and group named `web-services` that will own and run the Tomcat service.
 
 ``` bash
-sudo useradd -s /bin/false -m -U tomcat
+sudo useradd -s /bin/false -m -U web-services
 ```
 
 ## Install and Configure System Requirements
@@ -103,6 +153,7 @@ java -version
 ### Authbind
 
 **Note**: When using Nginx as the reverse proxy, authbind is **NOT required** for Tomcat because:
+
 - Nginx handles port 443 (HTTPS) and port 80 (HTTP)
 - Tomcat only needs to listen on port 8080 (>1024) on localhost
 
@@ -112,7 +163,7 @@ However, if you plan to run Tomcat standalone for testing, you can still install
 # Optional - only needed for standalone Tomcat testing
 sudo apt install authbind -y
 sudo touch /etc/authbind/byport/443
-sudo chown tomcat:tomcat /etc/authbind/byport/443
+sudo chown web-services:web-services /etc/authbind/byport/443
 sudo chmod 500 /etc/authbind/byport/443
 ```
 
@@ -168,29 +219,32 @@ sudo ln -s /var/opt/tomcat/webapps /opt/tomcat/webapps
 
 # Copy default webapps to new location
 sudo tar xvf apache-tomcat-*.tar.gz -C /tmp --strip-components=1 apache-tomcat-*/webapps
+# Remove existing webapps to allow clean re-installation
+sudo rm -rf /var/opt/tomcat/webapps/*
 sudo mv /tmp/webapps/* /var/opt/tomcat/webapps/
+sudo rm -rf /tmp/webapps
 ```
 
 #### Configure Permissions
 
 Set ownership and permissions for each directory according to its purpose:
 
-- `/opt/tomcat` - Owned by root, readable by tomcat (binaries should be read-only)
-- `/etc/opt/tomcat` - Owned by root, readable by tomcat (config files)
-- `/var/opt/tomcat` - Owned by tomcat (writable for logs, temp files, etc.)
+- `/opt/tomcat` - Owned by root, readable by web-services (binaries should be read-only)
+- `/etc/opt/tomcat` - Owned by root, readable by web-services (config files)
+- `/var/opt/tomcat` - Owned by web-services (writable for logs, temp files, etc.)
 
 ``` bash
-# Binary directory - root owns, tomcat can read/execute
-sudo chown -R root:tomcat /opt/tomcat/
+# Binary directory - root owns, web-services can read/execute
+sudo chown -R root:web-services /opt/tomcat/
 sudo chmod -R 750 /opt/tomcat/
 sudo chmod -R u+x /opt/tomcat/bin
 
-# Configuration directory - root owns, tomcat can read
-sudo chown -R root:tomcat /etc/opt/tomcat/
+# Configuration directory - root owns, web-services can read
+sudo chown -R root:web-services /etc/opt/tomcat/
 sudo chmod -R 750 /etc/opt/tomcat/
 
-# Variable data directory - tomcat owns (needs write access)
-sudo chown -R tomcat:tomcat /var/opt/tomcat/
+# Variable data directory - web-services owns (needs write access)
+sudo chown -R web-services:web-services /var/opt/tomcat/
 sudo chmod -R 750 /var/opt/tomcat/
 ```
 
@@ -218,9 +272,9 @@ To run Tomcat as a service that can be started and stopped easily, create a syst
     [Service]
     Type=forking
 
-    # although the service is started as root, it runs as the tomcat user
-    User=tomcat
-    Group=tomcat
+    # although the service is started as root, it runs as the web-services user
+    User=web-services
+    Group=web-services
 
     # environment variables, where to find Java and Tomcat
     Environment="JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64"
@@ -243,6 +297,7 @@ To run Tomcat as a service that can be started and stopped easily, create a syst
     ```
 
 **Key Changes for Nginx Architecture:**
+
 - Removed `authbind` from `ExecStart` (not needed for port 8080)
 - Added security-focused `CATALINA_OPTS`
 - Tomcat will listen on localhost:8080 (configured in server.xml below)
@@ -423,6 +478,7 @@ Certbot will automatically configure Nginx with SSL certificates and set up auto
 #### Option 3: Commercial or Self-Signed Certificates
 
 Place your certificate and private key in `/etc/nginx/ssl/`:
+
 - Certificate (with chain): `/etc/nginx/ssl/server.crt`
 - Private key: `/etc/nginx/ssl/server.key`
 
@@ -435,6 +491,22 @@ sudo nano /etc/nginx/sites-available/arcgis-enterprise
 ```
 
 Add the following configuration with security best practices:
+
+!!! note "Rate Limits for Web Mapping Applications"
+
+    **Important**: The default rate limits shown below are conservative starting points. Web mapping applications like ArcGIS generate **significantly more requests** than typical web applications due to:
+    
+    - **Map tile loading**: A single map view can trigger 20-50+ simultaneous tile requests
+    - **Feature layer queries**: Multiple feature layers loading concurrently
+    - **Real-time updates**: Dynamic layers that refresh frequently
+    - **User interactions**: Pan, zoom, identify operations generating rapid requests
+    
+    **Recommended Rate Limits for ArcGIS**:
+    - `rate=50r/s` to `rate=100r/s` for general use (instead of the conservative 10r/s shown)
+    - `burst=100` to `burst=200` to handle map load spikes
+    - `limit_conn` of 20-50 concurrent connections per IP
+    
+    Monitor your `/var/log/nginx/arcgis-error.log` for "limiting requests" messages and adjust accordingly. Consider exempting internal/trusted IPs from rate limiting if needed.
 
 ``` nginx
 # Rate limiting zone - prevents DDoS attacks
@@ -597,6 +669,7 @@ sudo ss -tlnp | grep nginx
 ```
 
 Test access from your browser:
+
 - `http://your-server.esri.com` → should redirect to HTTPS
 - `https://your-server.esri.com` → should show Tomcat landing page through Nginx
 
@@ -625,6 +698,18 @@ http {
 
 #### Configure Fail2Ban for Additional Protection
 
+[Fail2Ban](https://github.com/fail2ban/fail2ban) is an intrusion prevention framework that monitors log files for malicious activity (such as repeated failed login attempts, vulnerability scans, or suspicious request patterns) and automatically bans IP addresses by updating firewall rules. It provides an additional layer of defense against brute-force attacks, automated scanning tools, and common web exploits by temporarily or permanently blocking attackers after a configurable number of violations.
+
+**Why Fail2Ban is recommended for this deployment:**
+
+- Automatically blocks IPs making repeated authentication attempts against Tomcat Manager or Nginx
+- Protects against vulnerability scanners probing for known exploits
+- Reduces server load by blocking malicious bots and DDoS attempts at the firewall level
+- Works seamlessly with UFW and iptables to enforce bans
+- Minimal resource overhead with built-in filters for common attack patterns
+
+**Reference**: [Fail2Ban Documentation](https://fail2ban.readthedocs.io/)
+
 ``` bash
 sudo apt install fail2ban -y
 sudo nano /etc/fail2ban/jail.local
@@ -645,6 +730,30 @@ enabled = true
 [nginx-noproxy]
 enabled = true
 ```
+
+!!! note "Fail2Ban and ArcGIS Traffic Compatibility"
+
+    These Fail2Ban jails are safe for ArcGIS Enterprise deployments:
+    
+    - **nginx-badbots**: Blocks known malicious user agents (scanners, exploits). Legitimate ArcGIS clients (web apps, mobile apps, ArcGIS Pro) use standard user agents and are not affected.
+    - **nginx-noproxy**: Prevents open proxy abuse. Does not interfere with legitimate cross-domain requests (CORS) for basemaps or ArcGIS services.
+    - **nginx-http-auth**: Blocks repeated authentication failures. Won't affect normal ArcGIS authentication patterns.
+    - **nginx-noscript**: Blocks attempts to execute scripts in non-script directories.
+    
+    **Important distinctions:**
+    
+    - **Fail2Ban** detects *malicious patterns* (failed logins, vulnerability scans, attack signatures) and bans IPs temporarily
+    - **Nginx rate limiting** (configured above) controls *request volume* per IP and may need adjustment for map tile loading
+    
+    **Best practices:**
+    
+    - Monitor Fail2Ban logs: `sudo tail -f /var/log/fail2ban.log`
+    - Review banned IPs: `sudo fail2ban-client status nginx-http-auth`
+    - Whitelist trusted internal IPs in `/etc/fail2ban/jail.local` if needed:
+        ```ini
+        [DEFAULT]
+        ignoreip = 127.0.0.1/8 ::1 10.0.0.0/8 192.168.0.0/16
+        ```
 
 Restart Fail2Ban:
 
@@ -689,7 +798,7 @@ sudo nano /var/opt/tomcat/webapps/host-manager/META-INF/context.xml
 
 ``` xml
 <Valve className="org.apache.catalina.valves.RemoteAddrValve"
-       allow="127\.\d+\.\d+\.\d+|::1|0:1"/>
+    allow="127\.\d+\.\d+\.\d+|::1|0:1"/>
 ```
 
 Enclose this line in comment tags, like so:
@@ -697,7 +806,7 @@ Enclose this line in comment tags, like so:
 ``` xml
 <!--
 <Valve className="org.apache.catalina.valves.RemoteAddrValve"
-       allow="127\.\d+\.\d+\.\d+|::1|0:1"/>
+    allow="127\.\d+\.\d+\.\d+|::1|0:1"/>
 -->
 ```
 
@@ -722,6 +831,7 @@ sudo systemctl restart tomcat
 ```
 
 **Access URLs**:
+
 - Manager App: `http://localhost:8080/manager/html` (via SSH tunnel)
 - Host Manager App: `http://localhost:8080/host-manager/html` (via SSH tunnel)
 
@@ -733,57 +843,87 @@ sudo systemctl restart tomcat
 
 Reference: [ArcGIS Web Adaptor Installation Guide](https://enterprise.arcgis.com/en/web-adaptor/latest/install/java-linux/welcome-arcgis-web-adaptor-install-guide.htm)
 
-Procure the installation files for the ArcGIS Web Adapter for Linux from the Esri software repository or download them from the Esri customer care website.
+Procure the installation files for the ArcGIS Web Adapter for Linux from the Esri software repository or download them from the Esri customer care website. Place the file in `/tmp`.
 
 ``` bash
 cp /mnt/software/120_Final/Web_Adapter_for_ArcGIS_Linux_*.tar.gz /tmp
+# Or for newer naming convention:
+cp /mnt/software/120_Final/ArcGIS_Web_Adaptor_*_Linux_*.tar.gz /tmp
 ```
 
 ### Unpack the Installer
 
-Unpack the installer tarball. This example uses the version 12.0 installer; adjust the filename as necessary for other versions.
+Unpack the installer tarball. This works with multiple file naming conventions.
 
 ``` bash
-tar xvf /tmp/Web_Adapter_for_ArcGIS_Linux_*.tar.gz -C /tmp
+# Clean up any existing extraction
+rm -rf /tmp/WebAdapter*
+
+# Extract the tarball
+tar xvf /tmp/*Web*Adaptor*Linux*.tar.gz -C /tmp
 ```
 
 ### Create the Installation Directory
 
-Create the installation directory for the ArcGIS Web Adapter.
+Create the parent installation directory for ArcGIS products with proper ownership.
 
 ``` bash
-sudo mkdir -p /opt/arcgis/webadaptor
-sudo chown -R tomcat:tomcat /opt/arcgis/webadaptor
-sudo chmod -R 750 /opt/arcgis/webadaptor
+sudo mkdir -p /opt/arcgis
+sudo chown web-services:web-services /opt/arcgis
+sudo chmod 750 /opt/arcgis
 ```
 
 ### Run the Installer
 
-Run the setup script as the `tomcat` user.
+Run the setup script as the `web-services` user. The Setup file location may vary depending on the tarball structure.
 
-!!! note "`tomcat` User"
+!!! note "`web-services` User"
 
-    The ArcGIS Web Adapter for Java requires a Java application server to run, and will be copied from this location to the Tomcat web applications directory. In this installation, we are using Apache Tomcat, which we have configured to run under the `tomcat` user. Therefore, we install the Web Adapter as the `tomcat` user to ensure proper permissions and integration with the Tomcat server when deploying the Web Adapter application to Tomcat.
+    The ArcGIS Web Adaptor for Java requires a Java application server to run, and will be copied from this location to the Tomcat web applications directory. In this installation, we are using Apache Tomcat, which we have configured to run under the `web-services` user. Therefore, we install the Web Adaptor as the `web-services` user to ensure proper permissions and integration with the Tomcat server when deploying the Web Adaptor application to Tomcat.
 
 ``` bash
-sudo -u tomcat /tmp/WebAdapter/Setup -m silent -l yes -d /opt -v
+# Find and make Setup executable
+SETUP_FILE=$(find /tmp -maxdepth 2 -name "Setup" -type f 2>/dev/null | grep -i webadaptor | head -1)
+chmod +x "$SETUP_FILE"
+
+# Run installer
+sudo -u web-services "$SETUP_FILE" -m silent -l yes -d /opt/arcgis -v
 ```
 
-The installer places the Web Adapter files in `/opt/arcgis/WebAdaptor12.0` (for version 12.0). To make the installation directory consistent with our directory structure, rename it to `/opt/arcgis/webadaptor`.
+The installer places the Web Adapter files in a versioned directory (e.g., `/opt/arcgis/webadaptor12.0` for version 12.0). Create a symlink to make the installation directory consistent:
 
 ``` bash
-sudo -u tomcat mv /opt/WebAdaptor*/ /opt/arcgis/webadaptor
+# Find the installed directory
+WEBADAPTOR_DIR=$(find /opt/arcgis -maxdepth 1 -type d -iname "webadaptor*" 2>/dev/null | head -1)
+
+# Create symlink
+if [[ -n "$WEBADAPTOR_DIR" ]]; then
+    sudo rm -rf /opt/arcgis/webadaptor
+    sudo ln -sf "$WEBADAPTOR_DIR" /opt/arcgis/webadaptor
+    echo "Created symlink: /opt/arcgis/webadaptor -> $WEBADAPTOR_DIR"
+fi
+
+# Clean up
+rm -rf /tmp/WebAdapter*
 ```
 
 Once installed, the web adapter can be configured to support specific ArcGIS Enterprise components (Portal for ArcGIS and ArcGIS Server) following installation as part of the configuration process for the necessary components.
 
 ## Install Portal and Server Web Adapters
 
-Although we cannot configure them until the respective components are installed, we can install both the Portal for ArcGIS Web Adapter and the ArcGIS Server Web Adapter now. All we need to do is deploy the respective WAR files to the Tomcat web applications directory, and retart Tomcat.
+Although we cannot configure them until the respective components are installed, we can install both the Portal for ArcGIS Web Adaptor and the ArcGIS Server Web Adaptor now. All we need to do is deploy the respective WAR files to the Tomcat web applications directory, and restart Tomcat.
 
 ``` bash
-sudo cp /opt/arcgis/webadaptor/portal/war/arcgis.war /var/opt/tomcat/webapps/arcgis/server.war
-sudo cp /opt/arcgis/webadaptor/server/war/arcgis.war /var/opt/tomcat/webapps/arcgis/portal.war
+# Deploy Portal and Server Web Adaptor WAR files
+sudo mkdir -p /var/opt/tomcat/webapps/portal
+sudo mkdir -p /var/opt/tomcat/webapps/server
+sudo cp /opt/arcgis/webadaptor/portal/war/arcgis.war /var/opt/tomcat/webapps/portal.war
+sudo cp /opt/arcgis/webadaptor/server/war/arcgis.war /var/opt/tomcat/webapps/server.war
+
+# Set proper ownership
+sudo chown -R web-services:web-services /var/opt/tomcat/webapps/
+
+# Restart Tomcat
 sudo systemctl restart tomcat
 ```
 
@@ -803,13 +943,15 @@ You have successfully configured a secure ArcGIS Web Adapter deployment using:
 
 1. **Install Portal for ArcGIS and ArcGIS Server** - Follow the respective installation guides
 2. **Configure Web Adapters** - Once Portal and Server are running, configure the Web Adapters at:
-   - Portal: `https://your-server.esri.com/arcgis/portal`
-   - Server: `https://your-server.esri.com/arcgis/server`
+
+    - Portal: `https://your-server.esri.com/arcgis/portal`
+    - Server: `https://your-server.esri.com/arcgis/server`
 3. **Monitor and Maintain**:
-   - Review Nginx access logs: `/var/log/nginx/arcgis-access.log`
-   - Review Tomcat logs: `/var/opt/tomcat/logs/catalina.out`
-   - Keep SSL certificates up to date
-   - Apply security updates regularly
+
+    - Review Nginx access logs: `/var/log/nginx/arcgis-access.log`
+    - Review Tomcat logs: `/var/opt/tomcat/logs/catalina.out`
+    - Keep SSL certificates up to date
+    - Apply security updates regularly
 
 ### Advantages of This Architecture
 
@@ -822,16 +964,19 @@ You have successfully configured a secure ArcGIS Web Adapter deployment using:
 ### Troubleshooting
 
 **Problem**: Can't access site through HTTPS
+
 - Check Nginx status: `sudo systemctl status nginx`
 - Check SSL certificate paths in Nginx config
 - Review error logs: `sudo tail -f /var/log/nginx/arcgis-error.log`
 
 **Problem**: 502 Bad Gateway error
+
 - Verify Tomcat is running: `sudo systemctl status tomcat`
 - Check Tomcat is listening on localhost:8080: `sudo ss -tlnp | grep 8080`
 - Review Tomcat logs: `sudo tail -f /var/opt/tomcat/logs/catalina.out`
 
 **Problem**: Web Adapter not responding
+
 - Confirm WAR files deployed: `ls -la /var/opt/tomcat/webapps/`
 - Check for errors in Tomcat logs
 - Verify Nginx is forwarding requests correctly

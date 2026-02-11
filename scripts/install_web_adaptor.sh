@@ -14,8 +14,9 @@
 #   - Either config.ini with PFX_PASSWORD or pass password as command line argument
 #
 # Usage:
-#   ./install_web_adaptor.sh [--pfx-password <password>]
+#   ./install_web_adaptor.sh [<password>]
 #   
+#   If password not provided, you will be prompted for it.
 #   Or create /tmp/config.ini with:
 #     PFX_PASSWORD=your_password_here
 #
@@ -30,41 +31,39 @@ NC='\033[0m' # No Color
 
 # Configuration
 CONFIG_FILE="/tmp/config.ini"
-TOMCAT_USER="tomcat"
-TOMCAT_GROUP="tomcat"
+WEBSVC_USER="web-services"
+WEBSVC_GROUP="web-services"
 JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
 
 # Directories following FHS
-OPT_TOMCAT="/opt/tomcat"
-ETC_TOMCAT="/etc/opt/tomcat"
-VAR_TOMCAT="/var/opt/tomcat"
+OPT_WEBSVC="/opt/tomcat"
+ETC_WEBSVC="/etc/opt/tomcat"
+VAR_WEBSVC="/var/opt/tomcat"
 OPT_ARCGIS="/opt/arcgis"
 
 # Parse command line arguments
 PFX_PASSWORD=""
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --pfx-password)
-            PFX_PASSWORD="$2"
-            shift 2
-            ;;
-        -h|--help)
-            echo "Usage: $0 [--pfx-password <password>]"
-            echo ""
-            echo "Options:"
-            echo "  --pfx-password    Password for the PFX certificate file"
-            echo "  -h, --help        Show this help message"
-            echo ""
-            echo "Alternatively, create /tmp/config.ini with:"
-            echo "  PFX_PASSWORD=your_password_here"
-            exit 0
-            ;;
-        *)
-            echo -e "${RED}Unknown option: $1${NC}"
-            exit 1
-            ;;
-    esac
-done
+
+# Check if first argument is -h or --help
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    echo "Usage: $0 [<password>]"
+    echo ""
+    echo "Arguments:"
+    echo "  password          Password for the PFX certificate file (optional)"
+    echo "                    If not provided, you will be prompted for it."
+    echo ""
+    echo "Options:"
+    echo "  -h, --help        Show this help message"
+    echo ""
+    echo "Alternatively, create /tmp/config.ini with:"
+    echo "  PFX_PASSWORD=your_password_here"
+    exit 0
+fi
+
+# Accept password as first positional argument
+if [[ -n "$1" ]]; then
+    PFX_PASSWORD="$1"
+fi
 
 # Read config file if password not provided via command line
 if [[ -z "$PFX_PASSWORD" && -f "$CONFIG_FILE" ]]; then
@@ -72,11 +71,17 @@ if [[ -z "$PFX_PASSWORD" && -f "$CONFIG_FILE" ]]; then
     source "$CONFIG_FILE"
 fi
 
-# Validate PFX password is set
+# Prompt for password if still not set
 if [[ -z "$PFX_PASSWORD" ]]; then
-    echo -e "${RED}Error: PFX_PASSWORD not set.${NC}"
-    echo "Either provide --pfx-password argument or create $CONFIG_FILE with PFX_PASSWORD=<password>"
-    exit 1
+    echo -e "${YELLOW}PFX certificate password required.${NC}"
+    read -s -p "Enter PFX certificate password: " PFX_PASSWORD
+    echo  # New line after password input
+    
+    # Validate password was entered
+    if [[ -z "$PFX_PASSWORD" ]]; then
+        echo -e "${RED}Error: Password cannot be empty.${NC}"
+        exit 1
+    fi
 fi
 
 # Function to print status messages
@@ -104,8 +109,8 @@ check_prerequisites() {
     fi
     print_status "Found Tomcat: $TOMCAT_TARBALL"
     
-    # Check for Web Adaptor tar.gz
-    WEBADAPTOR_TARBALL=$(ls /tmp/Web_Adapter_for_ArcGIS_Linux_*.tar.gz 2>/dev/null | head -1)
+    # Check for Web Adaptor tar.gz (try multiple naming patterns)
+    WEBADAPTOR_TARBALL=$(ls /tmp/Web_Adapter_for_ArcGIS_Linux_*.tar.gz /tmp/ArcGIS_Web_Adaptor_*_Linux_*.tar.gz 2>/dev/null | head -1)
     if [[ -z "$WEBADAPTOR_TARBALL" ]]; then
         print_error "ArcGIS Web Adaptor tar.gz not found in /tmp"
         exit 1
@@ -135,13 +140,13 @@ configure_firewall() {
     sudo ufw --force enable
 }
 
-# Create tomcat user
-create_tomcat_user() {
-    print_status "Creating tomcat service user..."
-    if id "$TOMCAT_USER" &>/dev/null; then
-        print_warning "User $TOMCAT_USER already exists, skipping creation"
+# Create web services user
+create_web_services_user() {
+    print_status "Creating web services user..."
+    if id "$WEBSVC_USER" &>/dev/null; then
+        print_warning "User $WEBSVC_USER already exists, skipping creation"
     else
-        sudo useradd -s /bin/false -m -U "$TOMCAT_USER"
+        sudo useradd -s /bin/false -m -U "$WEBSVC_USER"
     fi
 }
 
@@ -157,7 +162,7 @@ install_authbind() {
     print_status "Installing and configuring authbind..."
     sudo apt install authbind -y
     sudo touch /etc/authbind/byport/443
-    sudo chown ${TOMCAT_USER}:${TOMCAT_GROUP} /etc/authbind/byport/443
+    sudo chown ${WEBSVC_USER}:${WEBSVC_GROUP} /etc/authbind/byport/443
     sudo chmod 500 /etc/authbind/byport/443
 }
 
@@ -166,28 +171,30 @@ install_tomcat() {
     print_status "Installing Apache Tomcat..."
     
     # Create directory structure
-    sudo mkdir -p "$OPT_TOMCAT"
-    sudo mkdir -p "$ETC_TOMCAT"
-    sudo mkdir -p "${VAR_TOMCAT}"/{logs,temp,work,webapps}
+    sudo mkdir -p "$OPT_WEBSVC"
+    sudo mkdir -p "$ETC_WEBSVC"
+    sudo mkdir -p "${VAR_WEBSVC}"/{logs,temp,work,webapps}
     
     # Extract Tomcat to /opt/tomcat
-    sudo tar xf "$TOMCAT_TARBALL" -C "$OPT_TOMCAT" --strip-components=1
+    sudo tar xf "$TOMCAT_TARBALL" -C "$OPT_WEBSVC" --strip-components=1
     
     # Move configuration files to /etc/opt/tomcat
-    sudo mv ${OPT_TOMCAT}/conf/* "$ETC_TOMCAT"/
-    sudo rmdir ${OPT_TOMCAT}/conf
-    sudo ln -sf "$ETC_TOMCAT" ${OPT_TOMCAT}/conf
+    sudo mv ${OPT_WEBSVC}/conf/* "$ETC_WEBSVC"/
+    sudo rmdir ${OPT_WEBSVC}/conf
+    sudo ln -sf "$ETC_WEBSVC" ${OPT_WEBSVC}/conf
     
     # Move variable directories to /var/opt/tomcat and create symlinks
-    sudo rm -rf ${OPT_TOMCAT}/logs ${OPT_TOMCAT}/temp ${OPT_TOMCAT}/work ${OPT_TOMCAT}/webapps
-    sudo ln -sf ${VAR_TOMCAT}/logs ${OPT_TOMCAT}/logs
-    sudo ln -sf ${VAR_TOMCAT}/temp ${OPT_TOMCAT}/temp
-    sudo ln -sf ${VAR_TOMCAT}/work ${OPT_TOMCAT}/work
-    sudo ln -sf ${VAR_TOMCAT}/webapps ${OPT_TOMCAT}/webapps
+    sudo rm -rf ${OPT_WEBSVC}/logs ${OPT_WEBSVC}/temp ${OPT_WEBSVC}/work ${OPT_WEBSVC}/webapps
+    sudo ln -sf ${VAR_WEBSVC}/logs ${OPT_WEBSVC}/logs
+    sudo ln -sf ${VAR_WEBSVC}/temp ${OPT_WEBSVC}/temp
+    sudo ln -sf ${VAR_WEBSVC}/work ${OPT_WEBSVC}/work
+    sudo ln -sf ${VAR_WEBSVC}/webapps ${OPT_WEBSVC}/webapps
     
     # Extract webapps to new location
     sudo tar xf "$TOMCAT_TARBALL" -C /tmp --strip-components=1 --wildcards "*/webapps/*"
-    sudo mv /tmp/webapps/* ${VAR_TOMCAT}/webapps/
+    # Remove existing webapps to allow clean installation
+    sudo rm -rf ${VAR_WEBSVC}/webapps/*
+    sudo mv /tmp/webapps/* ${VAR_WEBSVC}/webapps/
     sudo rm -rf /tmp/webapps
 }
 
@@ -195,18 +202,18 @@ install_tomcat() {
 configure_tomcat_permissions() {
     print_status "Configuring Tomcat permissions..."
     
-    # Binary directory - root owns, tomcat can read/execute
-    sudo chown -R root:${TOMCAT_GROUP} "$OPT_TOMCAT"/
-    sudo chmod -R 750 "$OPT_TOMCAT"/
-    sudo chmod -R u+x ${OPT_TOMCAT}/bin
+    # Binary directory - root owns, web-services can read/execute
+    sudo chown -R root:${WEBSVC_GROUP} "$OPT_WEBSVC"/
+    sudo chmod -R 750 "$OPT_WEBSVC"/
+    sudo chmod -R u+x ${OPT_WEBSVC}/bin
     
-    # Configuration directory - root owns, tomcat can read
-    sudo chown -R root:${TOMCAT_GROUP} "$ETC_TOMCAT"/
-    sudo chmod -R 750 "$ETC_TOMCAT"/
+    # Configuration directory - root owns, web-services can read
+    sudo chown -R root:${WEBSVC_GROUP} "$ETC_WEBSVC"/
+    sudo chmod -R 750 "$ETC_WEBSVC"/
     
-    # Variable data directory - tomcat owns (needs write access)
-    sudo chown -R ${TOMCAT_USER}:${TOMCAT_GROUP} "$VAR_TOMCAT"/
-    sudo chmod -R 750 "$VAR_TOMCAT"/
+    # Variable data directory - web-services owns (needs write access)
+    sudo chown -R ${WEBSVC_USER}:${WEBSVC_GROUP} "$VAR_WEBSVC"/
+    sudo chmod -R 750 "$VAR_WEBSVC"/
 }
 
 # Create systemd service file
@@ -221,23 +228,20 @@ After=network.target
 [Service]
 Type=forking
 
-# although the service is started as root, it runs as the tomcat user
-User=${TOMCAT_USER}
-Group=${TOMCAT_GROUP}
+    # although the service is started as root, it runs as the web-services user
+    User=${WEBSVC_USER}
+    Group=${WEBSVC_GROUP}
 
-# environment variables, where to find Java and Tomcat
-Environment="JAVA_HOME=${JAVA_HOME}"
-Environment="CATALINA_HOME=${OPT_TOMCAT}"
-Environment="CATALINA_BASE=${OPT_TOMCAT}"
-Environment="CATALINA_PID=${VAR_TOMCAT}/temp/tomcat.pid"
-Environment="CATALINA_TMPDIR=${VAR_TOMCAT}/temp"
+    # environment variables, where to find Java and Tomcat
+    Environment="JAVA_HOME=${JAVA_HOME}"
+    Environment="CATALINA_HOME=${OPT_WEBSVC}"
+    Environment="CATALINA_BASE=${OPT_WEBSVC}"
+    Environment="CATALINA_PID=${VAR_WEBSVC}/temp/tomcat.pid"
+    Environment="CATALINA_TMPDIR=${VAR_WEBSVC}/temp"
 
-# Startup using authbind so can use port 443
-ExecStart=/usr/bin/authbind --deep ${OPT_TOMCAT}/bin/startup.sh
-ExecStop=${OPT_TOMCAT}/bin/shutdown.sh
-
-RestartSec=10
-Restart=always
+    # Startup using authbind so can use port 443
+    ExecStart=/usr/bin/authbind --deep ${OPT_WEBSVC}/bin/startup.sh
+    ExecStop=${OPT_WEBSVC}/bin/shutdown.sh
 
 [Install]
 WantedBy=multi-user.target
@@ -249,26 +253,25 @@ configure_ssl() {
     print_status "Configuring SSL/TLS..."
     
     # Create certificate directory
-    sudo mkdir -p ${ETC_TOMCAT}/cert
-    sudo chown -R root:${TOMCAT_GROUP} ${ETC_TOMCAT}/cert
-    sudo chmod -R 750 ${ETC_TOMCAT}/cert
+    sudo mkdir -p ${ETC_WEBSVC}/cert
+    sudo chown -R root:${WEBSVC_GROUP} ${ETC_WEBSVC}/cert
+    sudo chmod -R 750 ${ETC_WEBSVC}/cert
     
     # Copy PFX certificate
-    sudo cp "$PFX_FILE" ${ETC_TOMCAT}/cert/tomcat_fullchain.p12
-    sudo chown root:${TOMCAT_GROUP} ${ETC_TOMCAT}/cert/tomcat_fullchain.p12
-    sudo chmod 640 ${ETC_TOMCAT}/cert/tomcat_fullchain.p12
+    sudo cp "$PFX_FILE" ${ETC_WEBSVC}/cert/tomcat_fullchain.p12
+    sudo chown root:${WEBSVC_GROUP} ${ETC_WEBSVC}/cert/tomcat_fullchain.p12
+    sudo chmod 640 ${ETC_WEBSVC}/cert/tomcat_fullchain.p12
     
     # Backup original server.xml
-    sudo cp ${ETC_TOMCAT}/server.xml ${ETC_TOMCAT}/server.xml.bak
+    sudo cp ${ETC_WEBSVC}/server.xml ${ETC_WEBSVC}/server.xml.bak
     
     # Add SSL connector to server.xml
     # First, check if SSL connector already exists
-    if grep -q 'port="443"' ${ETC_TOMCAT}/server.xml; then
+    if grep -q 'port="443"' ${ETC_WEBSVC}/server.xml; then
         print_warning "SSL connector already configured in server.xml"
     else
         # Insert SSL connector before the closing </Service> tag
         sudo sed -i '/<\/Service>/i \
-    <!-- HTTPS Connector -->\
     <Connector port="443"\
                protocol="org.apache.coyote.http11.Http11NioProtocol"\
                address="0.0.0.0"\
@@ -287,7 +290,7 @@ configure_ssl() {
             />\
 \
         </SSLHostConfig>\
-    </Connector>' ${ETC_TOMCAT}/server.xml
+    </Connector>' ${ETC_WEBSVC}/server.xml
     fi
 }
 
@@ -297,7 +300,7 @@ enable_remote_access() {
     
     # Comment out the RemoteAddrValve in manager and host-manager context.xml files
     for webapp in manager host-manager; do
-        CONTEXT_FILE="${VAR_TOMCAT}/webapps/${webapp}/META-INF/context.xml"
+        CONTEXT_FILE="${VAR_WEBSVC}/webapps/${webapp}/META-INF/context.xml"
         if [[ -f "$CONTEXT_FILE" ]]; then
             sudo sed -i 's/<Valve className="org.apache.catalina.valves.RemoteAddrValve"/<!-- <Valve className="org.apache.catalina.valves.RemoteAddrValve"/g' "$CONTEXT_FILE"
             sudo sed -i 's/allow="127\\\.\\d+\\\.\\d+\\\.\\d+|::1|0:0:0:0:0:0:0:1" \/>/allow="127\\.\\d+\\.\\d+\\.\\d+|::1|0:0:0:0:0:0:0:1" \/> -->/g' "$CONTEXT_FILE"
@@ -319,22 +322,50 @@ install_web_adaptor() {
     print_status "Installing ArcGIS Web Adaptor..."
     
     # Unpack the installer
-    rm -rf /tmp/WebAdapter
+    rm -rf /tmp/WebAdapter*
     tar xf "$WEBADAPTOR_TARBALL" -C /tmp
     
-    # Create the installation directory
-    sudo mkdir -p ${OPT_ARCGIS}/webadaptor
-    sudo chown -R ${TOMCAT_USER}:${TOMCAT_GROUP} ${OPT_ARCGIS}/webadaptor
-    sudo chmod -R 750 ${OPT_ARCGIS}/webadaptor
+    # Find the Setup file (directory name may vary)
+    SETUP_FILE=$(find /tmp -maxdepth 2 -name "Setup" -type f 2>/dev/null | grep -i webadaptor | head -1)
+    if [[ -z "$SETUP_FILE" ]]; then
+        print_error "Setup file not found after extracting Web Adaptor tarball"
+        exit 1
+    fi
+    print_status "Found Setup at: $SETUP_FILE"
     
-    # Run the installer as tomcat user
-    sudo -u ${TOMCAT_USER} /tmp/WebAdapter/Setup -m silent -l yes -d /opt -v
+    # Make Setup executable
+    chmod +x "$SETUP_FILE"
+    
+    # Create the installation directory with proper ownership
+    sudo mkdir -p ${OPT_ARCGIS}
+    sudo chown ${WEBSVC_USER}:${WEBSVC_GROUP} ${OPT_ARCGIS}
+    sudo chmod 750 ${OPT_ARCGIS}
+    
+    # Run the installer as web-services user
+    sudo -u ${WEBSVC_USER} "$SETUP_FILE" -m silent -l yes -d /opt/arcgis -v
 
-    # reanme the installed directory to /opt/arcgis/webadaptor
-    sudo -u ${TOMCAT_USER} mv /opt/WebAdaptor*/ /opt/arcgis/webadaptor
+    print_status "Checking installation directory..."
+    
+    # Find the installed WebAdaptor directory (case-insensitive)
+    WEBADAPTOR_DIR=$(find /opt/arcgis -maxdepth 1 -type d -iname "webadaptor*" 2>/dev/null | head -1)
+    
+    if [[ -n "$WEBADAPTOR_DIR" ]]; then
+        # Remove existing webadaptor symlink or directory if present
+        if [ -L "/opt/arcgis/webadaptor" ] || [ -d "/opt/arcgis/webadaptor" ]; then
+            sudo rm -rf /opt/arcgis/webadaptor
+        fi
+        
+        # Create symlink to the installed directory
+        sudo ln -sf "$WEBADAPTOR_DIR" /opt/arcgis/webadaptor
+        print_status "Created symlink: /opt/arcgis/webadaptor -> $WEBADAPTOR_DIR"
+    else
+        print_warning "Web Adaptor directory not found in expected location"
+        echo "Contents of /opt/arcgis:"
+        ls -la /opt/arcgis/
+    fi
 
     # Cleanup
-    rm -rf /tmp/WebAdapter
+    rm -rf /tmp/WebAdapter*
 }
 
 # Deploy Web Adaptor WAR files
@@ -342,19 +373,19 @@ deploy_web_adaptor_wars() {
     print_status "Deploying Portal and Server Web Adaptor WAR files..."
     
     # Create webapps directory for arcgis if it doesn't exist
-    sudo mkdir -p ${VAR_TOMCAT}/webapps
+    sudo mkdir -p ${VAR_WEBSVC}/webapps
     
     # Deploy Portal Web Adaptor
     if [[ -f "${OPT_ARCGIS}/webadaptor/portal/war/arcgis.war" ]]; then
-        sudo cp ${OPT_ARCGIS}/webadaptor/portal/war/arcgis.war ${VAR_TOMCAT}/webapps/portal.war
-        sudo chown ${TOMCAT_USER}:${TOMCAT_GROUP} ${VAR_TOMCAT}/webapps/portal.war
+        sudo cp ${OPT_ARCGIS}/webadaptor/portal/war/arcgis.war ${VAR_WEBSVC}/webapps/portal.war
+        sudo chown ${WEBSVC_USER}:${WEBSVC_GROUP} ${VAR_WEBSVC}/webapps/portal.war
         print_status "Deployed Portal Web Adaptor as portal.war"
     fi
     
     # Deploy Server Web Adaptor
     if [[ -f "${OPT_ARCGIS}/webadaptor/server/war/arcgis.war" ]]; then
-        sudo cp ${OPT_ARCGIS}/webadaptor/server/war/arcgis.war ${VAR_TOMCAT}/webapps/server.war
-        sudo chown ${TOMCAT_USER}:${TOMCAT_GROUP} ${VAR_TOMCAT}/webapps/server.war
+        sudo cp ${OPT_ARCGIS}/webadaptor/server/war/arcgis.war ${VAR_WEBSVC}/webapps/server.war
+        sudo chown ${WEBSVC_USER}:${WEBSVC_GROUP} ${VAR_WEBSVC}/webapps/server.war
         print_status "Deployed Server Web Adaptor as server.war"
     fi
     
@@ -372,7 +403,7 @@ main() {
     check_prerequisites
     update_system
     configure_firewall
-    create_tomcat_user
+    create_web_services_user
     install_java
     install_authbind
     install_tomcat

@@ -150,8 +150,8 @@ Create your first source feature layer:
 6. **Do not share** this source layer publicly
 7. Configure source layer settings:
 
-      - **Editing:** Usually disabled for source layers
-      - **Metadata:** Minimal (internal documentation only)
+    - **Editing:** Usually disabled for source layers
+    - **Metadata:** Minimal (internal documentation only)
 
 **Documentation:** [Publish hosted feature layers](https://doc.arcgis.com/en/arcgis-online/manage-data/publish-features.htm)
 
@@ -176,10 +176,10 @@ Feature layer views provide access to your data without duplication.
 2. Click **Create View Layer** from the overview tab
 3. Configure the view:
 
-      - **Definition query:** Filter data by SQL expression if needed
-      - **Extent:** Limit geographic area
-      - **Fields:** Hide sensitive or unnecessary fields
-      - **Editing:** Set to read-only for public access
+    - **Definition query:** Filter data by SQL expression if needed
+    - **Extent:** Limit geographic area
+    - **Fields:** Hide sensitive or unnecessary fields
+    - **Editing:** Set to read-only for public access
 
 4. Name the view clearly (e.g., `MyLayer_Public_View`)
 5. **Share appropriately** based on your audience
@@ -202,14 +202,14 @@ Create a stable public item that references your view:
 3. Set the public-facing title
 4. Configure the item:
 
-      - **Description:** Comprehensive documentation of the dataset
-      - **Tags:** Include topic, geography, vintage, source
-      - **Thumbnail:** Representative image
-      - **Symbology:** Configure drawing styles, colors, and classification methods
-      - **Scale Visibility:** Set minimum and maximum scale ranges for display
-      - **Labels:** Define labeling expressions and text formatting
-      - **Pop-ups:** Define attribute display and formatting
-      - **Terms of Use:** Specify licensing and attribution
+    - **Description:** Comprehensive documentation of the dataset
+    - **Tags:** Include topic, geography, vintage, source
+    - **Thumbnail:** Representative image
+    - **Symbology:** Configure drawing styles, colors, and classification methods
+    - **Scale Visibility:** Set minimum and maximum scale ranges for display
+    - **Labels:** Define labeling expressions and text formatting
+    - **Pop-ups:** Define attribute display and formatting
+    - **Terms of Use:** Specify licensing and attribution
 
 5. **Share with Everyone** (or appropriate audience)
 
@@ -230,9 +230,9 @@ Create a stable public item that references your view:
 1. Export updated dataset to a new FGDB
 2. Ensure schema consistency:
 
-      - Field names match existing structure
-      - Data types are compatible
-      - Required fields are populated
+    - Field names match existing structure
+    - Data types are compatible
+    - Required fields are populated
 
 3. Validate data quality
 4. Zip the FGDB
@@ -252,9 +252,9 @@ If **Blue** is currently active (serving the view):
 5. Confirm the overwrite operation
 6. Verify the data loaded correctly:
 
-      - Check feature count
-      - Review attribute values
-      - Test queries
+    - Check feature count
+    - Review attribute values
+    - Test queries
 
 **Documentation:** [Overwrite hosted feature layers](https://doc.arcgis.com/en/arcgis-online/manage-data/overwrite-feature-layers.htm)
 
@@ -266,10 +266,10 @@ Before switching production:
 2. Add it to a test map
 3. Verify:
 
-      - Data displays correctly
-      - Queries return expected results
-      - Symbology renders properly
-      - No schema mismatches
+    - Data displays correctly
+    - Queries return expected results
+    - Symbology renders properly
+    - No schema mismatches
 
 4. Delete the test view when validation is complete
 

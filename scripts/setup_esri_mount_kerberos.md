@@ -1,22 +1,21 @@
-# Esri Software Mount Setup (Kerberos)
+# Esri Software Share Mount Setup
 
-This script automates the setup of Kerberos-authenticated mounting of Esri internal software shares on Ubuntu systems. It eliminates the need to store passwords in plain text by using Active Directory Kerberos authentication.
+This script provides a simple way to mount Esri internal software shares on Ubuntu systems using password authentication. It's designed for quick, temporary access to retrieve software without complex configuration.
 
 ## Features
 
-- ✅ **Secure Authentication**: Uses Kerberos tickets instead of storing passwords
-- ✅ **Automatic Mounting**: Configures `/etc/fstab` for mount on boot
-- ✅ **Ticket Renewal**: Automatic Kerberos ticket renewal via systemd timer
-- ✅ **Multi-user Support**: Allows multiple users to access with their own credentials
-- ✅ **SMB 3.0**: Uses modern SMB protocol for better security and performance
-- ✅ **Idempotent**: Safe to run multiple times
+- ✅ **Simple Setup**: Minimal configuration required
+- ✅ **Password Prompt**: Securely prompts for password at runtime (no plain text storage)
+- ✅ **Quick Access**: Mount share, get software, unmount
+- ✅ **Flexible**: Supports parameter input or interactive prompts
+- ✅ **No Background Services**: Clean, straightforward mounting
 
 ## Prerequisites
 
 - Ubuntu system on the internal Esri network
 - Sudo/root access
-- Valid Esri Active Directory (AVWORLD) credentials
-- Network connectivity to `red-inf-dct-p01.esri.com`
+- Valid Esri Active Directory credentials
+- Network connectivity to `RED-INF-DCT-P05.esri.com`
 
 ## Installation
 
@@ -27,12 +26,15 @@ This script automates the setup of Kerberos-authenticated mounting of Esri inter
    chmod +x setup_esri_mount_kerberos.sh
    ```
 
-2. Run the script with your Esri username:
+2. Run the script (you'll be prompted for username and password):
+   ```bash
+   sudo ./setup_esri_mount_kerberos.sh
+   ```
+
+3. Or provide username as parameter (still prompts for password):
    ```bash
    sudo ./setup_esri_mount_kerberos.sh --username your_username
    ```
-
-3. Enter your password when prompted for Kerberos authentication
 
 ### Advanced Usage
 
@@ -40,65 +42,55 @@ This script automates the setup of Kerberos-authenticated mounting of Esri inter
 sudo ./setup_esri_mount_kerberos.sh [OPTIONS]
 
 Options:
-  -u, --username USERNAME     Esri username (required)
+  -u, --username USERNAME     Esri username (without @esri.com)
+  -p, --password PASSWORD     Password (if not provided, you'll be prompted)
   -m, --mount-point PATH      Mount point (default: /mnt/software)
-  -r, --realm REALM           Kerberos realm (default: AVWORLD.ESRI.COM)
-  -s, --server SERVER         SMB server (default: red-inf-dct-p01.esri.com)
+  -s, --server SERVER         SMB server (default: RED-INF-DCT-P05.esri.com)
+  --share SHARE               SMB share path (default: software/Esri/Released)
   -h, --help                  Display help message
 ```
 
 ### Examples
 
-**Basic setup:**
+**Interactive mode (recommended - prompts for both username and password):**
+```bash
+sudo ./setup_esri_mount_kerberos.sh
+```
+
+**Provide username (prompts for password):**
 ```bash
 sudo ./setup_esri_mount_kerberos.sh --username jdoe
 ```
 
 **Custom mount point:**
 ```bash
-sudo ./setup_esri_mount_kerberos.sh --username jdoe --mount-point /opt/esri-software
+sudo ./setup_esri_mount_kerberos.sh --username jdoe --mount-point /mnt/esri
 ```
 
-**Custom server:**
+**Provide password as parameter (less secure - visible in process list):**
 ```bash
-sudo ./setup_esri_mount_kerberos.sh --username jdoe --server custom-server.esri.com
+sudo ./setup_esri_mount_kerberos.sh --username jdoe --password mypassword
 ```
 
 ## What the Script Does
 
-1. **Installs Required Packages**
-   - `cifs-utils`: CIFS/SMB filesystem utilities
-   - `krb5-user`: Kerberos authentication tools
-   - `keyutils`: Key management utilities
+1. **Checks for Root Access**
+   - Ensures script is run with sudo privileges
 
-2. **Configures Kerberos**
-   - Creates `/etc/krb5.conf` with AVWORLD realm settings
-   - Configures ticket lifetime and renewal options
+2. **Prompts for Credentials**
+   - Asks for username (if not provided)
+   - Securely prompts for password (hidden input)
 
-3. **Creates Mount Point**
+3. **Installs Required Package**
+   - Installs `cifs-utils` if not already present
+
+4. **Creates Mount Point**
    - Creates directory at `/mnt/software` (or custom path)
+   - Unmounts any existing mount at that location
 
-4. **Configures Automatic Mounting**
-   - Adds entry to `/etc/fstab` for mount on boot
-   - Uses `sec=krb5` for Kerberos authentication
-   - Uses `multiuser` option for multi-user access
-
-5. **Sets Up Automatic Ticket Renewal**
-   - Creates systemd service: `kerberos-renew.service`
-   - Creates systemd timer: `kerberos-renew.timer`
-   - Renews ticket every 6 hours automatically
-
-6. **Obtains Initial Kerberos Ticket**
-   - Prompts for password and obtains ticket via `kinit`
-
-7. **Mounts the Share**
-   - Mounts share using Kerberos authentication
-
-8. **Verifies Setup**
-   - Checks mount status
-   - Verifies fstab configuration
-   - Confirms systemd timer is active
-   - Validates Kerberos ticket
+5. **Mounts the Share**
+   - Mounts share using username/password authentication
+   - Verifies mount is accessible
 
 ## Post-Installation
 
@@ -110,37 +102,19 @@ df -h | grep software
 
 # List contents
 ls /mnt/software
+
+# Access your software
+cd /mnt/software
 ```
 
-### Check Kerberos Ticket
+### Unmount When Finished
 
 ```bash
-# View current ticket
-klist
-
-# Renew ticket manually if needed
-kinit -R
+# Unmount the share
+sudo umount /mnt/software
 ```
 
-### Check Systemd Timer
-
-```bash
-# Check timer status
-sudo systemctl status kerberos-renew.timer
-
-# View timer logs
-sudo journalctl -u kerberos-renew.service
-```
-
-### Test After Reboot
-
-```bash
-# Reboot system
-sudo reboot
-
-# After reboot, verify mount
-df -h | grep software
-```
+**Note:** The mount is temporary and will not persist after reboot. This is intentional for security - no passwords are saved.
 
 ## Troubleshooting
 
@@ -148,72 +122,44 @@ df -h | grep software
 
 **Check network connectivity:**
 ```bash
-ping red-inf-dct-p01.esri.com
+ping RED-INF-DCT-P05.esri.com
 ```
 
-**Check Kerberos ticket:**
-```bash
-klist
-# If expired or missing:
-kinit your_username@AVWORLD.ESRI.COM
-```
+**Verify credentials:**
+- Ensure username is correct (without @esri.com)
+- Verify password is correct
+- Confirm you have access to the share
 
 **Try manual mount:**
 ```bash
-sudo mount -t cifs -o sec=krb5,vers=3.0,multiuser //red-inf-dct-p01.esri.com/software/Esri/Released /mnt/software
-```
-
-### Ticket Renewal Issues
-
-**Check service status:**
-```bash
-sudo systemctl status kerberos-renew.timer
-sudo systemctl status kerberos-renew.service
-```
-
-**Restart timer:**
-```bash
-sudo systemctl restart kerberos-renew.timer
-```
-
-**View logs:**
-```bash
-sudo journalctl -u kerberos-renew.service -f
+sudo mount -t cifs //RED-INF-DCT-P05.esri.com/software/Esri/Released /mnt/software -o username=YOUR_USERNAME,domain=ESRI
+# You'll be prompted for password
 ```
 
 ### Permission Denied
 
-Ensure your user has access to the share:
-```bash
-# Check if mounted with multiuser option
-mount | grep software
+- Verify your AD account has access to the software share
+- Try accessing from a Windows machine first to confirm permissions
+- Check with IT if you should have access
 
-# Try accessing as your user
-ls /mnt/software
+### Mount Already Exists
+
+If you get an error about the mount already existing:
+```bash
+# Unmount first
+sudo umount /mnt/software
+
+# Then run the script again
+sudo ./setup_esri_mount_kerberos.sh
 ```
 
-## Uninstallation
+## Cleanup
 
-To remove the setup:
+To unmount and clean up:
 
 ```bash
 # Unmount share
 sudo umount /mnt/software
-
-# Stop and disable timer
-sudo systemctl stop kerberos-renew.timer
-sudo systemctl disable kerberos-renew.timer
-
-# Remove systemd files
-sudo rm /etc/systemd/system/kerberos-renew.service
-sudo rm /etc/systemd/system/kerberos-renew.timer
-
-# Remove fstab entry
-sudo nano /etc/fstab
-# (manually remove the line containing the share)
-
-# Reload systemd
-sudo systemctl daemon-reload
 
 # Remove mount point (optional)
 sudo rmdir /mnt/software
@@ -221,15 +167,22 @@ sudo rmdir /mnt/software
 
 ## Security Notes
 
-- **No Password Storage**: Passwords are never stored on disk
-- **Kerberos Authentication**: Uses secure ticket-based authentication
-- **Automatic Renewal**: Tickets are renewed before expiration
-- **Multi-user**: Each user authenticates with their own credentials
-- **SMB 3.0**: Uses modern protocol with encryption support
+- **No Password Storage**: Passwords are prompted at runtime and never saved to disk
+- **Temporary Mount**: Mount does not persist after reboot
+- **Secure Input**: Password input is hidden when typing
+- **Limited Scope**: Designed for temporary access to retrieve needed software
+
+## Use Case
+
+This script is ideal for:
+- Quickly retrieving software installations
+- One-time access to internal shares
+- Development environments where you need occasional access
+- Situations where you don't need persistent mounts
 
 ## Support
 
 For issues or questions:
-- Check the [documentation](../docs/ArcGIS_Enterprise_Installation/ArcGIS_Enterprise_on_Ubuntu/accessing_esri_software_ubuntu.md)
+- Check the [accessing software documentation](../docs/ArcGIS_Enterprise_Installation/ArcGIS_Enterprise_on_Ubuntu/accessing_esri_software_ubuntu.md)
 - Contact your Esri IT support team
 - Verify network connectivity and Active Directory access

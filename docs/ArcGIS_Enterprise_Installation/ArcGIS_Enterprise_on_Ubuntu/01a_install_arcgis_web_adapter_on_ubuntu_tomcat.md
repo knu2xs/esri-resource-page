@@ -2,6 +2,44 @@
 
 Reference: [System Requirements](https://enterprise.arcgis.com/en/web-adaptor/latest/install/java-linux/arcgis-web-adaptor-system-requirements.htm)
 
+## Automated Installation Script
+
+An automated installation script is available in the `scripts` directory that performs all the steps outlined in this guide. The script handles:
+
+- System package updates
+- Firewall configuration
+- Java and Authbind installation
+- Tomcat installation and configuration
+- SSL/TLS certificate setup
+- ArcGIS Web Adaptor installation
+- WAR file deployment
+
+### Prerequisites
+
+Before running the script, ensure the following files are in `/tmp`:
+
+- Tomcat tarball: `apache-tomcat-*.tar.gz`
+- Web Adaptor tarball: `Web_Adapter_for_ArcGIS_Linux_*.tar.gz` or `ArcGIS_Web_Adaptor_*_Linux_*.tar.gz`
+- PFX certificate: `*.p12` or `*.pfx`
+
+### Usage
+
+``` bash
+# Run with password as argument
+./install_web_adaptor.sh "your_pfx_password"
+
+# Or run and be prompted for password
+./install_web_adaptor.sh
+
+# Or create config file
+echo "PFX_PASSWORD=your_password_here" > /tmp/config.ini
+./install_web_adaptor.sh
+```
+
+## Manual Installation Steps
+
+The following sections provide step-by-step manual installation instructions.
+
 ## Update System Packages
 
 Start by updating your package lists and upgrading existing packages to their latest versions if this has not already been done.
@@ -22,10 +60,10 @@ sudo ufw enable
 
 ## Service User
 
-Create a user and group for both `tomcat` that will own and run the Tomcat service.
+Create a user and group named `web-services` that will own and run the Tomcat service.
 
 ``` bash
-sudo useradd -s /bin/false -m -U tomcat
+sudo useradd -s /bin/false -m -U web-services
 ```
 
 ## Install and Configure System Requirements
@@ -56,7 +94,7 @@ To allow Tomcat to bind to ports below 1024 (like 80 and 443) without running as
 ``` bash
 sudo apt install authbind -y
 sudo touch /etc/authbind/byport/443
-sudo chown tomcat:tomcat /etc/authbind/byport/443
+sudo chown web-services:web-services /etc/authbind/byport/443
 sudo chmod 500 /etc/authbind/byport/443
 ```
 
@@ -110,29 +148,32 @@ sudo ln -s /var/opt/tomcat/webapps /opt/tomcat/webapps
 
 # Copy default webapps to new location
 sudo tar xvf apache-tomcat-*.tar.gz -C /tmp --strip-components=1 apache-tomcat-*/webapps
+# Remove existing webapps to allow clean re-installation
+sudo rm -rf /var/opt/tomcat/webapps/*
 sudo mv /tmp/webapps/* /var/opt/tomcat/webapps/
+sudo rm -rf /tmp/webapps
 ```
 
 #### Configure Permissions
 
 Set ownership and permissions for each directory according to its purpose:
 
-- `/opt/tomcat` - Owned by root, readable by tomcat (binaries should be read-only)
-- `/etc/opt/tomcat` - Owned by root, readable by tomcat (config files)
-- `/var/opt/tomcat` - Owned by tomcat (writable for logs, temp files, etc.)
+- `/opt/tomcat` - Owned by root, readable by web-services (binaries should be read-only)
+- `/etc/opt/tomcat` - Owned by root, readable by web-services (config files)
+- `/var/opt/tomcat` - Owned by web-services (writable for logs, temp files, etc.)
 
 ``` bash
-# Binary directory - root owns, tomcat can read/execute
-sudo chown -R root:tomcat /opt/tomcat/
+# Binary directory - root owns, web-services can read/execute
+sudo chown -R root:web-services /opt/tomcat/
 sudo chmod -R 750 /opt/tomcat/
 sudo chmod -R u+x /opt/tomcat/bin
 
-# Configuration directory - root owns, tomcat can read
-sudo chown -R root:tomcat /etc/opt/tomcat/
+# Configuration directory - root owns, web-services can read
+sudo chown -R root:web-services /etc/opt/tomcat/
 sudo chmod -R 750 /etc/opt/tomcat/
 
-# Variable data directory - tomcat owns (needs write access)
-sudo chown -R tomcat:tomcat /var/opt/tomcat/
+# Variable data directory - web-services owns (needs write access)
+sudo chown -R web-services:web-services /var/opt/tomcat/
 sudo chmod -R 750 /var/opt/tomcat/
 ```
 
@@ -158,9 +199,9 @@ To run Tomcat as a service that can be started and stopped easily, create a syst
     [Service]
     Type=forking
 
-    # although the service is started as root, it runs as the tomcat user
-    User=tomcat
-    Group=tomcat
+    # although the service is started as root, it runs as the web-services user
+    User=web-services
+    Group=web-services
 
     # environment variables, where to find Java and Tomcat
     Environment="JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64"
@@ -208,7 +249,7 @@ Create a directory and set permissions to store your SSL/TLS certificate files.
 
 ``` bash
 sudo mkdir /etc/opt/tomcat/cert
-sudo chown -R root:tomcat /etc/opt/tomcat/cert
+sudo chown -R root:web-services /etc/opt/tomcat/cert
 sudo chmod -R 750 /etc/opt/tomcat/cert
 ```
 
@@ -285,7 +326,13 @@ sudo chmod -R 750 /etc/opt/tomcat/cert
 
     This creates a proper full-chain PFX file named `tomcat_fullchain.p12` that can be used directly in Tomcat.
 
-Use a secure file transfer protocol (SCP or SFTP) client (like WinSCP, or the  command line tool) to upload your PFX file from your local machine to the server directory.
+Use a secure file transfer protocol (SCP or SFTP) client (like WinSCP, or the command line tool) to upload your PFX file from your local machine to `/tmp` on the server. Then move it to the certificate directory:
+
+``` bash
+sudo mv /tmp/tomcat_fullchain.p12 /etc/opt/tomcat/cert/
+sudo chown root:web-services /etc/opt/tomcat/cert/tomcat_fullchain.p12
+sudo chmod 640 /etc/opt/tomcat/cert/tomcat_fullchain.p12
+```
 
 #### Configure Tomcat for SSL/TLS with the PFX Certificate
 
@@ -329,7 +376,7 @@ Within each of the `META-INF` directories, there is a `context.xml` file that co
 
 ``` xml
 <Valve className="org.apache.catalina.valves.RemoteAddrValve"
-       allow="127\.\d+\.\d+\.\d+|::1|0:1"/>
+    allow="127\.\d+\.\d+\.\d+|::1|0:1"/>
 ```
 
 Enclose this line in comment tags, like so:
@@ -337,7 +384,7 @@ Enclose this line in comment tags, like so:
 ``` xml
 <!--
 <Valve className="org.apache.catalina.valves.RemoteAddrValve"
-       allow="127\.\d+\.\d+\.\d+|::1|0:1"/>
+    allow="127\.\d+\.\d+\.\d+|::1|0:1"/>
 -->
 ```
 
@@ -371,57 +418,87 @@ When prompted, enter the administrator username and password you configured in t
 
 Reference: [ArcGIS Web Adaptor Installation Guide](https://enterprise.arcgis.com/en/web-adaptor/latest/install/java-linux/welcome-arcgis-web-adaptor-install-guide.htm)
 
-Procure the installation files for the ArcGIS Web Adapter for Linux from the Esri software repository or download them from the Esri customer care website.
+Procure the installation files for the ArcGIS Web Adapter for Linux from the Esri software repository or download them from the Esri customer care website. Place the file in `/tmp`.
 
 ``` bash
 cp /mnt/software/120_Final/Web_Adapter_for_ArcGIS_Linux_*.tar.gz /tmp
+# Or for newer naming convention:
+cp /mnt/software/120_Final/ArcGIS_Web_Adaptor_*_Linux_*.tar.gz /tmp
 ```
 
 ### Unpack the Installer
 
-Unpack the installer tarball. This example uses the version 12.0 installer; adjust the filename as necessary for other versions.
+Unpack the installer tarball. This works with multiple file naming conventions.
 
 ``` bash
-tar xvf /tmp/Web_Adapter_for_ArcGIS_Linux_*.tar.gz -C /tmp
+# Clean up any existing extraction
+rm -rf /tmp/WebAdapter*
+
+# Extract the tarball
+tar xvf /tmp/*Web*Adaptor*Linux*.tar.gz -C /tmp
 ```
 
 ### Create the Installation Directory
 
-Create the installation directory for the ArcGIS Web Adapter.
+Create the parent installation directory for ArcGIS products with proper ownership.
 
 ``` bash
-sudo mkdir -p /opt/arcgis/webadaptor
-sudo chown -R tomcat:tomcat /opt/arcgis/webadaptor
-sudo chmod -R 750 /opt/arcgis/webadaptor
+sudo mkdir -p /opt/arcgis
+sudo chown web-services:web-services /opt/arcgis
+sudo chmod 750 /opt/arcgis
 ```
 
 ### Run the Installer
 
-Run the setup script as the `tomcat` user.
+Run the setup script as the `web-services` user. The Setup file location may vary depending on the tarball structure.
 
-!!! note "`tomcat` User"
+!!! note "`web-services` User"
 
-    The ArcGIS Web Adapter for Java requires a Java application server to run, and will be copied from this location to the Tomcat web applications directory. In this installation, we are using Apache Tomcat, which we have configured to run under the `tomcat` user. Therefore, we install the Web Adapter as the `tomcat` user to ensure proper permissions and integration with the Tomcat server when deploying the Web Adapter application to Tomcat.
+    The ArcGIS Web Adaptor for Java requires a Java application server to run, and will be copied from this location to the Tomcat web applications directory. In this installation, we are using Apache Tomcat, which we have configured to run under the `web-services` user. Therefore, we install the Web Adapter as the `web-services` user to ensure proper permissions and integration with the Tomcat server when deploying the Web Adapter application to Tomcat.
 
 ``` bash
-sudo -u tomcat /tmp/WebAdapter/Setup -m silent -l yes -d /opt -v
+# Find and make Setup executable
+SETUP_FILE=$(find /tmp -maxdepth 2 -name "Setup" -type f 2>/dev/null | grep -i webadaptor | head -1)
+chmod +x "$SETUP_FILE"
+
+# Run installer
+sudo -u web-services "$SETUP_FILE" -m silent -l yes -d /opt/arcgis -v
 ```
 
-The installer places the Web Adapter files in `/opt/arcgis/WebAdaptor12.0` (for version 12.0). To make the installation directory consistent with our directory structure, rename it to `/opt/arcgis/webadaptor`.
+The installer places the Web Adapter files in a versioned directory (e.g., `/opt/arcgis/webadaptor12.0` for version 12.0). Create a symlink to make the installation directory consistent:
 
 ``` bash
-sudo -u tomcat mv /opt/WebAdaptor*/ /opt/arcgis/webadaptor
+# Find the installed directory
+WEBADAPTOR_DIR=$(find /opt/arcgis -maxdepth 1 -type d -iname "webadaptor*" 2>/dev/null | head -1)
+
+# Create symlink
+if [[ -n "$WEBADAPTOR_DIR" ]]; then
+    sudo rm -rf /opt/arcgis/webadaptor
+    sudo ln -sf "$WEBADAPTOR_DIR" /opt/arcgis/webadaptor
+    echo "Created symlink: /opt/arcgis/webadaptor -> $WEBADAPTOR_DIR"
+fi
+
+# Clean up
+rm -rf /tmp/WebAdapter*
 ```
 
 Once installed, the web adapter can be configured to support specific ArcGIS Enterprise components (Portal for ArcGIS and ArcGIS Server) following installation as part of the configuration process for the necessary components.
 
 ## Install Portal and Server Web Adapters
 
-Although we cannot configure them until the respective components are installed, we can install both the Portal for ArcGIS Web Adapter and the ArcGIS Server Web Adapter now. All we need to do is deploy the respective WAR files to the Tomcat web applications directory, and retart Tomcat.
+Although we cannot configure them until the respective components are installed, we can install both the Portal for ArcGIS Web Adapter and the ArcGIS Server Web Adapter now. All we need to do is deploy the respective WAR files to the Tomcat web applications directory, and restart Tomcat.
 
 ``` bash
-sudo cp /opt/arcgis/webadaptor/portal/war/arcgis.war /var/opt/tomcat/webapps/arcgis/server.war
-sudo cp /opt/arcgis/webadaptor/server/war/arcgis.war /var/opt/tomcat/webapps/arcgis/portal.war
+# Deploy Portal and Server Web Adaptor WAR files
+sudo mkdir -p /var/opt/tomcat/webapps/portal
+sudo mkdir -p /var/opt/tomcat/webapps/server
+sudo cp /opt/arcgis/webadaptor/portal/war/arcgis.war /var/opt/tomcat/webapps/portal.war
+sudo cp /opt/arcgis/webadaptor/server/war/arcgis.war /var/opt/tomcat/webapps/server.war
+
+# Set proper ownership
+sudo chown -R web-services:web-services /var/opt/tomcat/webapps/
+
+# Restart Tomcat
 sudo systemctl restart tomcat
 ```
 
