@@ -11,52 +11,52 @@ PS029647.esri.com
 ### SSH Access
 
 ```
-ssh linux@PS029647.esri.com
+ssh linux@PS030068.esri.com
 ```
 
 #### Tomcat
 
-- Default: <http://ps029647.esri.com:8080>
-- HTTPS: <https://ps029647.esri.com>
+- Default: <http://ps030068.esri.com:8080>
+- HTTPS: <https://ps030068.esri.com>
 
 #### Portal
 
-- Portal: <https://ps029647.esri.com/portal>
-- Portal Admin: <https://ps029647.esri.com/portal/portaladmin>
+- Portal: <https://ps030068.esri.com/portal>
+- Portal Admin: <https://ps030068.esri.com/portal/portaladmin>
 
 ### Server
 
 ```
-PS029649.esri.com
+PS030067.esri.com
 ```
 
 #### SSH Access
 
 ```
-ssh linux@PS029649.esri.com
+ssh linux@PS030067.esri.com
 ```
 
 #### ArcGIS Server
 
-- ArcGIS Server (Web Adaptor): <https://ps029649.esri.com/server>
-- ArcGIS Server Manager: <https://ps029649.esri.com:6443/arcgis/manager>
-- ArcGIS Server Admin: <https://ps029649.esri.com:6443/arcgis/admin>
+- ArcGIS Server (Web Adaptor): <https://ps030067.esri.com/server>
+- ArcGIS Server Manager: <https://ps030067.esri.com:6443/arcgis/manager>
+- ArcGIS Server Admin: <https://ps030067.esri.com:6443/arcgis/admin>
 
 ### Data Store
 
 ```
-PS029648.esri.com
+PS030066.esri.com
 ```
 
 #### SSH Access
 
 ```
-ssh linux@PS029648.esri.com
+ssh linux@PS030066.esri.com
 ```
 
 #### ArcGIS Data Store
 
-- ArcGIS Data Store Admin: <https://ps029648.esri.com:2443/arcgis/datastore>
+- ArcGIS Data Store Admin: <https://ps030066.esri.com:2443/arcgis/datastore>
 
 ### Notebook
 
