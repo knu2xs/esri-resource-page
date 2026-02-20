@@ -2,6 +2,45 @@
 
 Reference: [System Requirements](https://enterprise.arcgis.com/en/web-adaptor/latest/install/java-linux/arcgis-web-adaptor-system-requirements.htm)
 
+## Automated Installation Script
+
+An automated installation script is available in the `scripts` directory that performs all the steps outlined in this guide. The script handles:
+
+- System package updates
+- Firewall configuration
+- Java installation
+- Tomcat installation and configuration
+- Nginx installation and configuration
+- SSL/TLS certificate setup
+- ArcGIS Web Adaptor installation
+- WAR file deployment
+
+### Prerequisites
+
+Before running the script, ensure the following files are in `/tmp`:
+
+- Tomcat tarball: `apache-tomcat-*.tar.gz`
+- Web Adaptor tarball: `Web_Adapter_for_ArcGIS_Linux_*.tar.gz` or `ArcGIS_Web_Adaptor_*_Linux_*.tar.gz`
+- PFX certificate: `*.p12` or `*.pfx`
+
+### Usage
+
+``` bash
+# Run with password as argument
+./install_web_adaptor_nginx.sh "your_pfx_password"
+
+# Or run and be prompted for password
+./install_web_adaptor_nginx.sh
+
+# Or create config file
+echo "PFX_PASSWORD=your_password_here" > /tmp/config.ini
+./install_web_adaptor_nginx.sh
+```
+
+## Manual Installation Steps
+
+The following sections provide step-by-step manual installation instructions.
+
 ## Architecture Overview
 
 This guide implements a **reverse proxy architecture** using **Nginx** as the front-end web server with **Tomcat** as the back-end application server hosting the ArcGIS Web Adapters.
@@ -183,7 +222,7 @@ Tomcat is not available in the default Ubuntu repositories, so you must download
 cd /tmp
 ``` 
 
-2. Visit the official [Apache Tomcat 10 Software Downloads](https://www.google.com/url?sa=i&source=web&rct=j&url=https://tomcat.apache.org/download-10.cgi&ved=2ahUKEwij0qie14mSAxWEmGoFHQRYB84Qy_kOegQIDBAE&opi=89978449&cd&psig=AOvVaw10ehzpfYEwMvNo8KYnvwip&ust=1768433752574000) page to find the latest stable version and get the download link for the `*.tar.gz` file.
+2. Visit the official [Apache Tomcat 10 Software Downloads](https://tomcat.apache.org/download-10.cgi) page to find the latest stable version and get the download link for the `*.tar.gz` file.
 
 3. Use wget to download the package (replace the URL with the current version's link).
 
@@ -194,35 +233,41 @@ wget //dlcdn.apache.org/tomcat/tomcat-10/v<version>/bin/apache-tomcat-<version>.
 4. Create the destination directories and extract the archive. We use a FHS-compliant layout:
     - `/opt/tomcat` - Application binaries (read-only)
     - `/etc/opt/tomcat` - Configuration files
-    - `/var/opt/tomcat` - Variable data (logs, temp, work, webapps)
+    - `/var/opt/tomcat` - Variable data (temp, work, webapps)
+    - `/var/log/tomcat` - Log files (more in line with FHS standards than keeping logs in /var/opt)
 
 ``` bash
 # Create directory structure
 sudo mkdir -p /opt/tomcat
 sudo mkdir -p /etc/opt/tomcat
-sudo mkdir -p /var/opt/tomcat/{logs,temp,work,webapps}
+sudo mkdir -p /var/opt/tomcat/{temp,work,webapps}
+sudo mkdir -p /var/log/tomcat
 
 # Extract Tomcat to /opt/tomcat
 sudo tar xvf apache-tomcat-*.tar.gz -C /opt/tomcat --strip-components=1
 
-# Move configuration files to /etc/opt/tomcat
-sudo mv /opt/tomcat/conf/* /etc/opt/tomcat/
+# Move configuration files to /etc/opt/tomcat and create symlink
+sudo rsync -av --remove-source-files /opt/tomcat/conf/ /etc/opt/tomcat/
 sudo rmdir /opt/tomcat/conf
 sudo ln -s /etc/opt/tomcat /opt/tomcat/conf
 
-# Move variable directories to /var/opt/tomcat and create symlinks
-sudo rm -rf /opt/tomcat/logs /opt/tomcat/temp /opt/tomcat/work /opt/tomcat/webapps
-sudo ln -s /var/opt/tomcat/logs /opt/tomcat/logs
-sudo ln -s /var/opt/tomcat/temp /opt/tomcat/temp
-sudo ln -s /var/opt/tomcat/work /opt/tomcat/work
-sudo ln -s /var/opt/tomcat/webapps /opt/tomcat/webapps
+# Move any logfiles to /var/log/tomcat and create symlink
+sudo rsync -av --remove-source-files /opt/tomcat/logs/ /var/log/tomcat/
+sudo rmdir /opt/tomcat/logs
+sudo ln -s /var/log/tomcat /opt/tomcat/logs
 
-# Copy default webapps to new location
-sudo tar xvf apache-tomcat-*.tar.gz -C /tmp --strip-components=1 apache-tomcat-*/webapps
-# Remove existing webapps to allow clean re-installation
-sudo rm -rf /var/opt/tomcat/webapps/*
-sudo mv /tmp/webapps/* /var/opt/tomcat/webapps/
-sudo rm -rf /tmp/webapps
+# move variable data directories to /var/opt/tomcat and create symlinks
+sudo rsync -av --remove-source-files /opt/tomcat/temp/ /var/opt/tomcat/temp/
+sudo rm -rf /opt/tomcat/temp
+sudo ln -s /var/opt/tomcat/temp /opt/tomcat/temp
+
+sudo rsync -av --remove-source-files /opt/tomcat/work/ /var/opt/tomcat/work/
+sudo rm -rf /opt/tomcat/work
+sudo ln -s /var/opt/tomcat/work /opt/tomcat/work
+
+sudo rsync -av --remove-source-files /opt/tomcat/webapps/ /var/opt/tomcat/webapps/
+sudo rm -rf /opt/tomcat/webapps
+sudo ln -s /var/opt/tomcat/webapps /opt/tomcat/webapps
 ```
 
 #### Configure Permissions
@@ -246,6 +291,10 @@ sudo chmod -R 750 /etc/opt/tomcat/
 # Variable data directory - web-services owns (needs write access)
 sudo chown -R web-services:web-services /var/opt/tomcat/
 sudo chmod -R 750 /var/opt/tomcat/
+
+# Log directory - root owns and web-services can write; users can read but cannot modify logs
+sudo chown -R root:web-services /var/log/tomcat/
+sudo chmod -R 775 /var/log/tomcat/
 ```
 
 #### Service Configuration
@@ -882,29 +931,17 @@ Run the setup script as the `web-services` user. The Setup file location may var
     The ArcGIS Web Adaptor for Java requires a Java application server to run, and will be copied from this location to the Tomcat web applications directory. In this installation, we are using Apache Tomcat, which we have configured to run under the `web-services` user. Therefore, we install the Web Adaptor as the `web-services` user to ensure proper permissions and integration with the Tomcat server when deploying the Web Adaptor application to Tomcat.
 
 ``` bash
-# Find and make Setup executable
-SETUP_FILE=$(find /tmp -maxdepth 2 -name "Setup" -type f 2>/dev/null | grep -i webadaptor | head -1)
-chmod +x "$SETUP_FILE"
+# make Setup executable
+chmod +x /tmp/WebAdaptor/Setup
 
 # Run installer
-sudo -u web-services "$SETUP_FILE" -m silent -l yes -d /opt/arcgis -v
+sudo -u web-services /tmp/WebAdaptor/Setup -m silent -l yes -d /opt/arcgis -v
 ```
 
 The installer places the Web Adapter files in a versioned directory (e.g., `/opt/arcgis/webadaptor12.0` for version 12.0). Create a symlink to make the installation directory consistent:
 
-``` bash
-# Find the installed directory
-WEBADAPTOR_DIR=$(find /opt/arcgis -maxdepth 1 -type d -iname "webadaptor*" 2>/dev/null | head -1)
-
-# Create symlink
-if [[ -n "$WEBADAPTOR_DIR" ]]; then
-    sudo rm -rf /opt/arcgis/webadaptor
-    sudo ln -sf "$WEBADAPTOR_DIR" /opt/arcgis/webadaptor
-    echo "Created symlink: /opt/arcgis/webadaptor -> $WEBADAPTOR_DIR"
-fi
-
-# Clean up
-rm -rf /tmp/WebAdapter*
+```bash
+sudo -u web-services ln -sf $(sudo find /opt/arcgis -maxdepth 1 -type d -name 'webadaptor[0-9]*' | sort -V | tail -1) /opt/arcgis/webadaptor
 ```
 
 Once installed, the web adapter can be configured to support specific ArcGIS Enterprise components (Portal for ArcGIS and ArcGIS Server) following installation as part of the configuration process for the necessary components.
@@ -914,17 +951,24 @@ Once installed, the web adapter can be configured to support specific ArcGIS Ent
 Although we cannot configure them until the respective components are installed, we can install both the Portal for ArcGIS Web Adaptor and the ArcGIS Server Web Adaptor now. All we need to do is deploy the respective WAR files to the Tomcat web applications directory, and restart Tomcat.
 
 ``` bash
+# Find and store the WAR file path
+WAR_FILE=$(find /opt/arcgis/webadaptor -name "*.war" -type f | head -1)
+
 # Deploy Portal and Server Web Adaptor WAR files
 sudo mkdir -p /var/opt/tomcat/webapps/portal
+sudo cp "$WAR_FILE" /var/opt/tomcat/webapps/portal.war
+
 sudo mkdir -p /var/opt/tomcat/webapps/server
-sudo cp /opt/arcgis/webadaptor/portal/war/arcgis.war /var/opt/tomcat/webapps/portal.war
-sudo cp /opt/arcgis/webadaptor/server/war/arcgis.war /var/opt/tomcat/webapps/server.war
+sudo cp "$WAR_FILE" /var/opt/tomcat/webapps/server.war
 
 # Set proper ownership
 sudo chown -R web-services:web-services /var/opt/tomcat/webapps/
+```
 
-# Restart Tomcat
-sudo systemctl restart tomcat
+Once the WAR files are copied, Tomcat will automatically deploy them. You can check the Tomcat logs to confirm successful deployment. The logs will indicate when the WAR files are deployed and if there are any issues during deployment.
+
+``` bash
+sudo tail -f /var/log/tomcat/catalina.out
 ```
 
 !!! warning "Do Not Configure Web Adapters Yet"
@@ -949,7 +993,7 @@ You have successfully configured a secure ArcGIS Web Adapter deployment using:
 3. **Monitor and Maintain**:
 
     - Review Nginx access logs: `/var/log/nginx/arcgis-access.log`
-    - Review Tomcat logs: `/var/opt/tomcat/logs/catalina.out`
+    - Review Tomcat logs: `/var/log/tomcat/catalina.out`
     - Keep SSL certificates up to date
     - Apply security updates regularly
 
@@ -973,7 +1017,7 @@ You have successfully configured a secure ArcGIS Web Adapter deployment using:
 
 - Verify Tomcat is running: `sudo systemctl status tomcat`
 - Check Tomcat is listening on localhost:8080: `sudo ss -tlnp | grep 8080`
-- Review Tomcat logs: `sudo tail -f /var/opt/tomcat/logs/catalina.out`
+- Review Tomcat logs: `sudo tail -f /var/log/tomcat/catalina.out`
 
 **Problem**: Web Adapter not responding
 

@@ -273,30 +273,30 @@ sudo /opt/arcgis/portal/tools/createportal/createportal.sh \
     | 13 | What is your dream job? |
     | 14 | Where did you go on your first date? |
 
-## Move Log Files to `var/opt/arcgis/portal/logs`
+## Move Log Files to `var/log/arcgis/portal/`
 
-By default, Portal for ArcGIS stores its log files in the installation directory under `/opt/arcgis/portal/logs`. To follow best practices and keep variable data in `/var/opt`, we will move the log files to `/var/opt/arcgis/portal/logs` and create a symbolic link.
+By default, Portal for ArcGIS stores its log files in the installation directory under `/opt/arcgis/portal/logs`. To follow best practices and keep variable data, specifically logfiles, in `/var/log`, we will move the log files to `/var/log/arcgis/portal/` and create a symbolic link.
 
-Create the new logs directory in `/var/opt`.
+Create the new logs directory in `/var/log`.
 
 ``` bash
-sudo mkdir -p /var/opt/arcgis/portal/logs
-sudo chown -R arcgis:arcgis /var/opt/arcgis/portal/logs
-sudo chmod 750 /var/opt/arcgis/portal/logs
+sudo mkdir -p /var/log/arcgis/portal
+sudo chown -R arcgis:arcgis /var/log/arcgis/portal
+sudo chmod 755 /var/log/arcgis/portal
 ```
 
 Use the REST API to update the log location using the script installed in tools with Portal.
 
 ``` bash
-sudo -u arcgis /opt/arcgis/portal/tools/portaladmin.sh updateportalproperties --properties logDir=/var/opt/arcgis/portal/logs --username portaladmin --password P@ssw0rd
+sudo -u arcgis /opt/arcgis/portal/tools/portaladmin.sh updateportalproperties --properties logDir=/var/log/arcgis/portal --username portaladmin --password P@ssw0rd
 ```
 
 Move the existing log files to the new location, ensure permissions are correctly set and remove the old logs directory.
 
 ``` bash
-sudo mv /opt/arcgis/portal/logs/* /var/opt/arcgis/portal/logs/
-sudo chown -R arcgis:arcgis /var/opt/arcgis/portal/logs
-sudo chmod -R 750 /var/opt/arcgis/portal/logs
+sudo mv /opt/arcgis/portal/logs/* /var/log/arcgis/portal/
+sudo chown -R arcgis:arcgis /var/log/arcgis/portal
+sudo chmod -R 755 /var/log/arcgis/portal
 sudo rmdir /opt/arcgis/portal/logs
 ```
 
