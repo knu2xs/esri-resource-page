@@ -39,6 +39,7 @@ JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
 OPT_WEBSVC="/opt/tomcat"
 ETC_WEBSVC="/etc/opt/tomcat"
 VAR_WEBSVC="/var/opt/tomcat"
+VAR_LOG_TOMCAT="/var/log/tomcat"
 OPT_ARCGIS="/opt/arcgis"
 
 # Parse command line arguments
@@ -173,29 +174,34 @@ install_tomcat() {
     # Create directory structure
     sudo mkdir -p "$OPT_WEBSVC"
     sudo mkdir -p "$ETC_WEBSVC"
-    sudo mkdir -p "${VAR_WEBSVC}"/{logs,temp,work,webapps}
+    sudo mkdir -p "${VAR_WEBSVC}"/{temp,work,webapps}
+    sudo mkdir -p "$VAR_LOG_TOMCAT"
     
     # Extract Tomcat to /opt/tomcat
     sudo tar xf "$TOMCAT_TARBALL" -C "$OPT_WEBSVC" --strip-components=1
     
-    # Move configuration files to /etc/opt/tomcat
-    sudo mv ${OPT_WEBSVC}/conf/* "$ETC_WEBSVC"/
+    # Move configuration files to /etc/opt/tomcat and create symlink
+    sudo rsync -av --remove-source-files ${OPT_WEBSVC}/conf/ "$ETC_WEBSVC"/
     sudo rmdir ${OPT_WEBSVC}/conf
-    sudo ln -sf "$ETC_WEBSVC" ${OPT_WEBSVC}/conf
+    sudo ln -s "$ETC_WEBSVC" ${OPT_WEBSVC}/conf
     
-    # Move variable directories to /var/opt/tomcat and create symlinks
-    sudo rm -rf ${OPT_WEBSVC}/logs ${OPT_WEBSVC}/temp ${OPT_WEBSVC}/work ${OPT_WEBSVC}/webapps
-    sudo ln -sf ${VAR_WEBSVC}/logs ${OPT_WEBSVC}/logs
-    sudo ln -sf ${VAR_WEBSVC}/temp ${OPT_WEBSVC}/temp
-    sudo ln -sf ${VAR_WEBSVC}/work ${OPT_WEBSVC}/work
-    sudo ln -sf ${VAR_WEBSVC}/webapps ${OPT_WEBSVC}/webapps
+    # Move any logfiles to /var/log/tomcat and create symlink
+    sudo rsync -av --remove-source-files ${OPT_WEBSVC}/logs/ "$VAR_LOG_TOMCAT"/
+    sudo rmdir ${OPT_WEBSVC}/logs
+    sudo ln -s "$VAR_LOG_TOMCAT" ${OPT_WEBSVC}/logs
     
-    # Extract webapps to new location
-    sudo tar xf "$TOMCAT_TARBALL" -C /tmp --strip-components=1 --wildcards "*/webapps/*"
-    # Remove existing webapps to allow clean installation
-    sudo rm -rf ${VAR_WEBSVC}/webapps/*
-    sudo mv /tmp/webapps/* ${VAR_WEBSVC}/webapps/
-    sudo rm -rf /tmp/webapps
+    # Move variable data directories to /var/opt/tomcat and create symlinks
+    sudo rsync -av --remove-source-files ${OPT_WEBSVC}/temp/ ${VAR_WEBSVC}/temp/
+    sudo rm -rf ${OPT_WEBSVC}/temp
+    sudo ln -s ${VAR_WEBSVC}/temp ${OPT_WEBSVC}/temp
+    
+    sudo rsync -av --remove-source-files ${OPT_WEBSVC}/work/ ${VAR_WEBSVC}/work/
+    sudo rm -rf ${OPT_WEBSVC}/work
+    sudo ln -s ${VAR_WEBSVC}/work ${OPT_WEBSVC}/work
+    
+    sudo rsync -av --remove-source-files ${OPT_WEBSVC}/webapps/ ${VAR_WEBSVC}/webapps/
+    sudo rm -rf ${OPT_WEBSVC}/webapps
+    sudo ln -s ${VAR_WEBSVC}/webapps ${OPT_WEBSVC}/webapps
 }
 
 # Configure Tomcat permissions
@@ -214,6 +220,10 @@ configure_tomcat_permissions() {
     # Variable data directory - web-services owns (needs write access)
     sudo chown -R ${WEBSVC_USER}:${WEBSVC_GROUP} "$VAR_WEBSVC"/
     sudo chmod -R 750 "$VAR_WEBSVC"/
+    
+    # Log directory - root owns and web-services can write; users can read but cannot modify logs
+    sudo chown -R root:${WEBSVC_GROUP} "$VAR_LOG_TOMCAT"/
+    sudo chmod -R 775 "$VAR_LOG_TOMCAT"/
 }
 
 # Create systemd service file
@@ -325,16 +335,8 @@ install_web_adaptor() {
     rm -rf /tmp/WebAdapter*
     tar xf "$WEBADAPTOR_TARBALL" -C /tmp
     
-    # Find the Setup file (directory name may vary)
-    SETUP_FILE=$(find /tmp -maxdepth 2 -name "Setup" -type f 2>/dev/null | grep -i webadaptor | head -1)
-    if [[ -z "$SETUP_FILE" ]]; then
-        print_error "Setup file not found after extracting Web Adaptor tarball"
-        exit 1
-    fi
-    print_status "Found Setup at: $SETUP_FILE"
-    
     # Make Setup executable
-    chmod +x "$SETUP_FILE"
+    chmod +x /tmp/WebAdaptor/Setup
     
     # Create the installation directory with proper ownership
     sudo mkdir -p ${OPT_ARCGIS}
@@ -342,28 +344,13 @@ install_web_adaptor() {
     sudo chmod 750 ${OPT_ARCGIS}
     
     # Run the installer as web-services user
-    sudo -u ${WEBSVC_USER} "$SETUP_FILE" -m silent -l yes -d /opt/arcgis -v
-
-    print_status "Checking installation directory..."
+    sudo -u ${WEBSVC_USER} /tmp/WebAdaptor/Setup -m silent -l yes -d /opt/arcgis -v
     
-    # Find the installed WebAdaptor directory (case-insensitive)
-    WEBADAPTOR_DIR=$(find /opt/arcgis -maxdepth 1 -type d -iname "webadaptor*" 2>/dev/null | head -1)
+    print_status "Creating Web Adaptor symlink..."
     
-    if [[ -n "$WEBADAPTOR_DIR" ]]; then
-        # Remove existing webadaptor symlink or directory if present
-        if [ -L "/opt/arcgis/webadaptor" ] || [ -d "/opt/arcgis/webadaptor" ]; then
-            sudo rm -rf /opt/arcgis/webadaptor
-        fi
-        
-        # Create symlink to the installed directory
-        sudo ln -sf "$WEBADAPTOR_DIR" /opt/arcgis/webadaptor
-        print_status "Created symlink: /opt/arcgis/webadaptor -> $WEBADAPTOR_DIR"
-    else
-        print_warning "Web Adaptor directory not found in expected location"
-        echo "Contents of /opt/arcgis:"
-        ls -la /opt/arcgis/
-    fi
-
+    # Create symlink to make installation directory consistent
+    sudo -u ${WEBSVC_USER} ln -sf $(sudo find /opt/arcgis -maxdepth 1 -type d -name 'webadaptor[0-9]*' | sort -V | tail -1) /opt/arcgis/webadaptor
+    
     # Cleanup
     rm -rf /tmp/WebAdapter*
 }
@@ -372,25 +359,32 @@ install_web_adaptor() {
 deploy_web_adaptor_wars() {
     print_status "Deploying Portal and Server Web Adaptor WAR files..."
     
-    # Create webapps directory for arcgis if it doesn't exist
-    sudo mkdir -p ${VAR_WEBSVC}/webapps
+    # Find and store the WAR file path
+    WAR_FILE=$(find /opt/arcgis/webadaptor -name "*.war" -type f | head -1)
     
-    # Deploy Portal Web Adaptor
-    if [[ -f "${OPT_ARCGIS}/webadaptor/portal/war/arcgis.war" ]]; then
-        sudo cp ${OPT_ARCGIS}/webadaptor/portal/war/arcgis.war ${VAR_WEBSVC}/webapps/portal.war
-        sudo chown ${WEBSVC_USER}:${WEBSVC_GROUP} ${VAR_WEBSVC}/webapps/portal.war
-        print_status "Deployed Portal Web Adaptor as portal.war"
+    if [[ -z "$WAR_FILE" ]]; then
+        print_error "WAR file not found in /opt/arcgis/webadaptor"
+        exit 1
     fi
+    print_status "Found WAR file: $WAR_FILE"
     
-    # Deploy Server Web Adaptor
-    if [[ -f "${OPT_ARCGIS}/webadaptor/server/war/arcgis.war" ]]; then
-        sudo cp ${OPT_ARCGIS}/webadaptor/server/war/arcgis.war ${VAR_WEBSVC}/webapps/server.war
-        sudo chown ${WEBSVC_USER}:${WEBSVC_GROUP} ${VAR_WEBSVC}/webapps/server.war
-        print_status "Deployed Server Web Adaptor as server.war"
-    fi
+    # Deploy Portal Web Adaptor WAR file
+    sudo mkdir -p ${VAR_WEBSVC}/webapps/portal
+    sudo cp "$WAR_FILE" ${VAR_WEBSVC}/webapps/portal.war
     
-    # Restart Tomcat to deploy WARs
-    sudo systemctl restart tomcat
+    # Deploy Server Web Adaptor WAR file
+    sudo mkdir -p ${VAR_WEBSVC}/webapps/server
+    sudo cp "$WAR_FILE" ${VAR_WEBSVC}/webapps/server.war
+    
+    # Set proper ownership
+    sudo chown -R ${WEBSVC_USER}:${WEBSVC_GROUP} ${VAR_WEBSVC}/webapps/
+    
+    print_status "Deployed Portal and Server Web Adaptor WAR files"
+    
+    # Check Tomcat logs for deployment confirmation
+    print_status "Checking Tomcat logs for deployment status..."
+    sleep 5
+    sudo tail -n 20 ${VAR_LOG_TOMCAT}/catalina.out
 }
 
 # Main installation flow

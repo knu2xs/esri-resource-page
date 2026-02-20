@@ -62,7 +62,8 @@ The script performs the following installation steps in order:
 6. **Install Tomcat** — Extracts and configures Tomcat with FHS-compliant directory structure:
    - `/opt/tomcat` — Application binaries (read-only)
    - `/etc/opt/tomcat` — Configuration files
-   - `/var/opt/tomcat` — Variable data (logs, temp, work, webapps)
+   - `/var/opt/tomcat` — Variable data (temp, work, webapps)
+   - `/var/log/tomcat` — Log files (more in line with FHS standards than keeping logs in /var/opt)
 7. **Configure Permissions** — Sets appropriate ownership and permissions for each directory
 8. **Create Systemd Service** — Creates and enables the Tomcat systemd service
 9. **Configure SSL/TLS** — Copies the PFX certificate and configures Tomcat for HTTPS on port 443
@@ -87,31 +88,33 @@ After the script completes:
 After installation, the following directory structure is created:
 
 ```
-/opt/tomcat/                    # Tomcat binaries (root:tomcat, 750)
+/opt/tomcat/                    # Tomcat binaries (root:web-services, 750)
 ├── bin/
 ├── lib/
 ├── conf -> /etc/opt/tomcat     # Symlink to config
-├── logs -> /var/opt/tomcat/logs
+├── logs -> /var/log/tomcat     # Symlink to logs
 ├── temp -> /var/opt/tomcat/temp
 ├── work -> /var/opt/tomcat/work
 └── webapps -> /var/opt/tomcat/webapps
 
-/etc/opt/tomcat/                # Configuration files (root:tomcat, 750)
+/etc/opt/tomcat/                # Configuration files (root:web-services, 750)
 ├── server.xml
 ├── tomcat-users.xml
 ├── cert/
 │   └── tomcat_fullchain.p12
 └── ...
 
-/var/opt/tomcat/                # Variable data (tomcat:tomcat, 750)
-├── logs/
+/var/opt/tomcat/                # Variable data (web-services:web-services, 750)
 ├── temp/
 ├── work/
 └── webapps/
     ├── portal.war
     └── server.war
 
-/opt/arcgis/webadaptor/         # Web Adaptor installation (tomcat:tomcat, 750)
+/var/log/tomcat/                # Log files (root:web-services, 775)
+└── catalina.out
+
+/opt/arcgis/webadaptor/         # Web Adaptor installation (web-services:web-services, 750)
 ├── portal/
 └── server/
 ```
@@ -127,7 +130,7 @@ sudo systemctl status tomcat
 ### View Tomcat Logs
 
 ```bash
-sudo tail -f /var/opt/tomcat/logs/catalina.out
+sudo tail -f /var/log/tomcat/catalina.out
 ```
 
 ### Restart Tomcat
