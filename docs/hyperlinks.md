@@ -13,6 +13,10 @@ This is largely a list of bookmarks I want to have redily accessible. In all hon
 - [Esri Professional Services on ArcGIS Online](https://prof-services.maps.arcgis.com/home/index.html)
 - [Pacific Delivery Center on ArcGIS Online](https://ps-pdc.maps.arcgis.com/home/index.html)
 
+### Resources
+
+- [ArcGIS Enterprise Reporter](https://github.com/EsriPS/gisenterprisereporter)
+
 ## References
 
 - [Request Ed Services Course Materials](https://esriis.sharepoint.com/sites/EsriTrainingServices/Lists/Request%20for%20Digital%20Course%20Materials/AllItems.aspx)
