@@ -52,9 +52,11 @@ Based on FHS, application software should be installed in `/opt`, variable data 
 sudo mkdir -p /opt/arcgis/portal
 sudo chown arcgis:arcgis /opt/arcgis/portal
 sudo chmod 750 /opt/arcgis/portal
+
 sudo mkdir -p /var/opt/arcgis/portal/content
 sudo chown -R arcgis:arcgis /var/opt/arcgis
 sudo chmod 750 /var/opt/arcgis
+
 sudo mkdir -p /etc/opt/arcgis/portal
 sudo chown root:arcgis /etc/opt/arcgis
 sudo chmod 750 /etc/opt/arcgis

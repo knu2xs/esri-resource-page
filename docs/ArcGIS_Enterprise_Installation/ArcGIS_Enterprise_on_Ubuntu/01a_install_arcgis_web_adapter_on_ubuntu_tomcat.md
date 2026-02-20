@@ -354,6 +354,20 @@ sudo nano /etc/opt/tomcat/server.xml
 
 Locate the existing `<Connector>` element for port 8443 (commented out by default) and modify it to use port 443 and the PFX keystore. Replace the existing `<Connector>` element with the following configuration, making sure to update the `certificateKeystorePassword` attribute with the actual password for your PFX file.
 
+!!! warning "Password Entry - Avoid Escape Characters"
+
+    When entering the password in the XML file:
+    
+    - **Type the password manually** rather than copying/pasting from terminal output that may contain ANSI escape codes (color formatting)
+    - Do NOT use command substitution like `$(cat password.txt)` directly in the XML file
+    - Ensure the password contains only valid XML characters (no control characters like ESC, TAB, etc.)
+    - If you must copy the password, use a plain text editor without formatting
+    
+    **Invalid XML characters (like Unicode 0x1b / ESC)** will prevent Tomcat from starting with errors like:
+    ```
+    SAXParseException: An invalid XML character (Unicode: 0x1b) was found in the value of attribute "certificateKeystorePassword"
+    ```
+
 ``` xml
      <Connector port="443"
                protocol="org.apache.coyote.http11.Http11NioProtocol"
@@ -374,6 +388,29 @@ Locate the existing `<Connector>` element for port 8443 (commented out by defaul
 
      </SSLHostConfig>
      </Connector>
+```
+
+##### Validate the server.xml Configuration
+
+After editing `server.xml`, validate that it contains no invalid XML characters:
+
+``` bash
+# Check for non-printable characters in the password line
+sudo grep -n "certificateKeystorePassword" /etc/opt/tomcat/server.xml | cat -A
+```
+
+The output should show only printable characters. If you see escape sequences like `^[` (representing ESC), the XML file contains invalid characters and must be corrected.
+
+You can also validate the XML syntax:
+
+``` bash
+xmllint --noout /etc/opt/tomcat/server.xml && echo "XML is valid" || echo "XML has errors"
+```
+
+If `xmllint` is not installed, install it with:
+
+``` bash
+sudo apt install libxml2-utils -y
 ```
 
 ### Enable Remote Access
@@ -486,7 +523,7 @@ Although we cannot configure them until the respective components are installed,
 
 ``` bash
 # Find and store the WAR file path
-WAR_FILE=$(find /opt/arcgis/webadaptor -name "*.war" -type f | head -1)
+WAR_FILE=$(sudo find /opt/arcgis -name "*.war" -type f | head -1)
 
 # Deploy Portal and Server Web Adaptor WAR files
 sudo mkdir -p /var/opt/tomcat/webapps/portal
@@ -508,6 +545,53 @@ sudo tail -f /var/log/tomcat/catalina.out
 !!! warning "Do Not Configure Web Adapters Yet"
 
     Do not attempt to configure the Web Adapters for Portal for ArcGIS or ArcGIS Server until those components are installed and running. The Web Adapter configuration process requires communication with the respective component, which will fail if the component is not yet installed. Attempting to configure the Web Adapters before installing Portal for ArcGIS and ArcGIS Server will result in errors and unsuccessful configuration.
+
+## Troubleshooting
+
+### Tomcat Fails to Start with XML Parse Error
+
+**Symptom**: Tomcat fails to start with an error like:
+
+```
+org.xml.sax.SAXParseException; systemId: file:/opt/tomcat/conf/server.xml; 
+lineNumber: 175; columnNumber: 46; An invalid XML character (Unicode: 0x1b) 
+was found in the value of attribute "certificateKeystorePassword"
+```
+
+**Cause**: The password in `server.xml` contains invalid XML characters, typically ANSI escape sequences (Unicode 0x1b = ESC character) from terminal output with color codes.
+
+**Solution**:
+
+1. Check for non-printable characters in the server.xml file:
+
+    ``` bash
+    sudo grep "certificateKeystorePassword" /etc/opt/tomcat/server.xml | cat -A
+    ```
+    
+    Look for `^[` or other escape sequences in the output.
+
+2. Open the file and manually re-type the password (do NOT copy/paste from terminal):
+
+    ``` bash
+    sudo nano /etc/opt/tomcat/server.xml
+    ```
+
+3. Locate the `certificateKeystorePassword` attribute (around line 175) and type the password directly.
+
+4. Validate the XML file:
+
+    ``` bash
+    xmllint --noout /etc/opt/tomcat/server.xml && echo "XML is valid" || echo "XML has errors"
+    ```
+
+5. Restart Tomcat:
+
+    ``` bash
+    sudo systemctl restart tomcat
+    sudo systemctl status tomcat --no-pager
+    ```
+
+**Prevention**: Always type passwords directly into configuration files rather than copying from terminal output.
 
 ## Conclusion
 

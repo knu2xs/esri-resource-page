@@ -44,35 +44,43 @@ OPT_ARCGIS="/opt/arcgis"
 
 # Parse command line arguments
 PFX_PASSWORD=""
+MANAGER_PASSWORD=""
 
 # Check if first argument is -h or --help
 if [[ "$1" == "-h" || "$1" == "--help" ]]; then
-    echo "Usage: $0 [<password>]"
+    echo "Usage: $0 [<pfx_password>] [<manager_password>]"
     echo ""
     echo "Arguments:"
-    echo "  password          Password for the PFX certificate file (optional)"
-    echo "                    If not provided, you will be prompted for it."
+    echo "  pfx_password      Password for the PFX certificate file (optional)"
+    echo "  manager_password  Password for Tomcat Manager admin user (optional)"
+    echo "                    If not provided, you will be prompted for them."
     echo ""
     echo "Options:"
     echo "  -h, --help        Show this help message"
     echo ""
     echo "Alternatively, create /tmp/config.ini with:"
-    echo "  PFX_PASSWORD=your_password_here"
+    echo "  PFX_PASSWORD=your_pfx_password_here"
+    echo "  MANAGER_PASSWORD=your_manager_password_here"
     exit 0
 fi
 
-# Accept password as first positional argument
+# Accept passwords as positional arguments
 if [[ -n "$1" ]]; then
     PFX_PASSWORD="$1"
 fi
-
-# Read config file if password not provided via command line
-if [[ -z "$PFX_PASSWORD" && -f "$CONFIG_FILE" ]]; then
-    echo -e "${YELLOW}Reading configuration from $CONFIG_FILE...${NC}"
-    source "$CONFIG_FILE"
+if [[ -n "$2" ]]; then
+    MANAGER_PASSWORD="$2"
 fi
 
-# Prompt for password if still not set
+# Read config file if passwords not provided via command line
+if [[ -f "$CONFIG_FILE" ]]; then
+    if [[ -z "$PFX_PASSWORD" || -z "$MANAGER_PASSWORD" ]]; then
+        echo -e "${YELLOW}Reading configuration from $CONFIG_FILE...${NC}"
+        source "$CONFIG_FILE"
+    fi
+fi
+
+# Prompt for PFX password if still not set
 if [[ -z "$PFX_PASSWORD" ]]; then
     echo -e "${YELLOW}PFX certificate password required.${NC}"
     read -s -p "Enter PFX certificate password: " PFX_PASSWORD
@@ -80,7 +88,20 @@ if [[ -z "$PFX_PASSWORD" ]]; then
     
     # Validate password was entered
     if [[ -z "$PFX_PASSWORD" ]]; then
-        echo -e "${RED}Error: Password cannot be empty.${NC}"
+        echo -e "${RED}Error: PFX password cannot be empty.${NC}"
+        exit 1
+    fi
+fi
+
+# Prompt for Tomcat Manager password if still not set
+if [[ -z "$MANAGER_PASSWORD" ]]; then
+    echo -e "${YELLOW}Tomcat Manager admin password required.${NC}"
+    read -s -p "Enter Tomcat Manager admin password: " MANAGER_PASSWORD
+    echo  # New line after password input
+    
+    # Validate password was entered
+    if [[ -z "$MANAGER_PASSWORD" ]]; then
+        echo -e "${RED}Error: Manager password cannot be empty.${NC}"
         exit 1
     fi
 fi
@@ -275,16 +296,24 @@ configure_ssl() {
     # Backup original server.xml
     sudo cp ${ETC_WEBSVC}/server.xml ${ETC_WEBSVC}/server.xml.bak
     
+    # XML-escape the password to handle special characters
+    # This prevents XML corruption when password contains &, <, >, ", ', etc.
+    ESCAPED_PASSWORD="${PFX_PASSWORD//&/&amp;}"
+    ESCAPED_PASSWORD="${ESCAPED_PASSWORD//</&lt;}"
+    ESCAPED_PASSWORD="${ESCAPED_PASSWORD//>/&gt;}"
+    ESCAPED_PASSWORD="${ESCAPED_PASSWORD//\"/&quot;}"
+    ESCAPED_PASSWORD="${ESCAPED_PASSWORD//\'/&apos;}"
+    
     # Add SSL connector to server.xml
     # First, check if SSL connector already exists
     if grep -q 'port="443"' ${ETC_WEBSVC}/server.xml; then
         print_warning "SSL connector already configured in server.xml"
     else
         # Insert SSL connector before the closing </Service> tag
+        # Use absolute path for certificate to avoid path resolution issues
         sudo sed -i '/<\/Service>/i \
     <Connector port="443"\
                protocol="org.apache.coyote.http11.Http11NioProtocol"\
-               address="0.0.0.0"\
                maxThreads="300"\
                scheme="https"\
                secure="true"\
@@ -294,9 +323,9 @@ configure_ssl() {
                        honorCipherOrder="true">\
 \
             <Certificate\
-                certificateKeystoreFile="cert/tomcat_fullchain.p12"\
+                certificateKeystoreFile="'"${ETC_WEBSVC}"'/cert/tomcat_fullchain.p12"\
                 certificateKeystoreType="PKCS12"\
-                certificateKeystorePassword="'"${PFX_PASSWORD}"'"\
+                certificateKeystorePassword="'"${ESCAPED_PASSWORD}"'"\
             />\
 \
         </SSLHostConfig>\
@@ -308,15 +337,98 @@ configure_ssl() {
 enable_remote_access() {
     print_status "Enabling remote access for Tomcat manager applications..."
     
-    # Comment out the RemoteAddrValve in manager and host-manager context.xml files
+    # Comment out the RemoteAddrValve in manager and host-manager META-INF/context.xml files
+    # This allows remote access to the Tomcat Manager and Host Manager web applications
     for webapp in manager host-manager; do
         CONTEXT_FILE="${VAR_WEBSVC}/webapps/${webapp}/META-INF/context.xml"
         if [[ -f "$CONTEXT_FILE" ]]; then
+            print_status "Modifying ${webapp} context.xml to allow remote access..."
+            
+            # Backup the original context.xml
+            sudo cp "$CONTEXT_FILE" "${CONTEXT_FILE}.bak"
+            
+            # Comment out the RemoteAddrValve that restricts access to localhost only
             sudo sed -i 's/<Valve className="org.apache.catalina.valves.RemoteAddrValve"/<!-- <Valve className="org.apache.catalina.valves.RemoteAddrValve"/g' "$CONTEXT_FILE"
             sudo sed -i 's/allow="127\\\.\\d+\\\.\\d+\\\.\\d+|::1|0:0:0:0:0:0:0:1" \/>/allow="127\\.\\d+\\.\\d+\\.\\d+|::1|0:0:0:0:0:0:0:1" \/> -->/g' "$CONTEXT_FILE"
+            
+            # Verify the change was made
+            if grep -q '<!-- <Valve className="org.apache.catalina.valves.RemoteAddrValve"' "$CONTEXT_FILE"; then
+                print_status "Successfully enabled remote access for ${webapp}"
+            else
+                print_warning "Could not verify remote access configuration for ${webapp}"
+            fi
+        else
+            print_warning "Context file not found: $CONTEXT_FILE"
+            print_warning "Remote access for ${webapp} will need to be configured manually"
         fi
     done
+    
+    print_warning "SECURITY NOTE: Remote access to Tomcat Manager is now enabled."
+    print_warning "Ensure you configure strong credentials in tomcat-users.xml"
 }
+
+# Configure Tomcat manager users
+configure_tomcat_users() {
+    print_status "Configuring Tomcat manager users..."
+    
+    # Backup original tomcat-users.xml
+    sudo cp ${ETC_WEBSVC}/tomcat-users.xml ${ETC_WEBSVC}/tomcat-users.xml.bak
+    
+    # XML-escape the manager password to handle special characters
+    ESCAPED_MANAGER_PASSWORD="${MANAGER_PASSWORD//&/&amp;}"
+    ESCAPED_MANAGER_PASSWORD="${ESCAPED_MANAGER_PASSWORD//</&lt;}"
+    ESCAPED_MANAGER_PASSWORD="${ESCAPED_MANAGER_PASSWORD//>/&gt;}"
+    ESCAPED_MANAGER_PASSWORD="${ESCAPED_MANAGER_PASSWORD//\"/&quot;}"
+    ESCAPED_MANAGER_PASSWORD="${ESCAPED_MANAGER_PASSWORD//\'/&apos;}"
+    
+    # Create tomcat-users.xml with admin credentials
+    sudo tee ${ETC_WEBSVC}/tomcat-users.xml > /dev/null <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  NOTE: By default, no user is included in the "manager-gui" role required
+  to operate the "/manager/html" web application.  If you wish to use this app,
+  you must define such a user - the username and password are arbitrary.
+-->
+<tomcat-users xmlns="http://tomcat.apache.org/xml"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://tomcat.apache.org/xml tomcat-users.xsd"
+              version="1.0">
+  
+  <!-- Define roles for Tomcat Manager access -->
+  <role rolename="manager-gui"/>
+  <role rolename="manager-script"/>
+  <role rolename="manager-jmx"/>
+  <role rolename="manager-status"/>
+  <role rolename="admin-gui"/>
+  <role rolename="admin-script"/>
+  
+  <!-- Admin user with all manager roles -->
+  <user username="admin" password="${ESCAPED_MANAGER_PASSWORD}" roles="manager-gui,manager-script,manager-jmx,manager-status,admin-gui,admin-script"/>
+  
+</tomcat-users>
+EOF
+    
+    sudo chown root:${WEBSVC_GROUP} ${ETC_WEBSVC}/tomcat-users.xml
+    sudo chmod 640 ${ETC_WEBSVC}/tomcat-users.xml
+    
+    # Save credentials to a secure file
+    sudo tee /root/tomcat-credentials.txt > /dev/null <<EOF
+Tomcat Manager Credentials
+==========================
+Username: admin
+Password: ${MANAGER_PASSWORD}
+
+Manager URL: https://<your_server>/manager/html
+Host Manager URL: https://<your_server>/host-manager/html
+
+IMPORTANT: Store these credentials securely and delete this file after saving them.
+EOF
+    sudo chmod 600 /root/tomcat-credentials.txt
+    
+    print_status "Tomcat manager users configured"
+    print_warning "Manager credentials saved to /root/tomcat-credentials.txt"
+    print_warning "Username: admin"
+}  
 
 # Start Tomcat service
 start_tomcat() {
@@ -369,11 +481,10 @@ deploy_web_adaptor_wars() {
     print_status "Found WAR file: $WAR_FILE"
     
     # Deploy Portal Web Adaptor WAR file
-    sudo mkdir -p ${VAR_WEBSVC}/webapps/portal
+    # Note: Do NOT create directories - Tomcat auto-deploys WAR files only if the directory doesn't exist
     sudo cp "$WAR_FILE" ${VAR_WEBSVC}/webapps/portal.war
     
     # Deploy Server Web Adaptor WAR file
-    sudo mkdir -p ${VAR_WEBSVC}/webapps/server
     sudo cp "$WAR_FILE" ${VAR_WEBSVC}/webapps/server.war
     
     # Set proper ownership
@@ -405,6 +516,7 @@ main() {
     create_tomcat_service
     configure_ssl
     enable_remote_access
+    configure_tomcat_users
     start_tomcat
     install_web_adaptor
     deploy_web_adaptor_wars
@@ -416,10 +528,13 @@ main() {
     echo ""
     echo "Next steps:"
     echo "  1. Access Tomcat at https://<your_server>/"
-    echo "  2. Install Portal for ArcGIS and/or ArcGIS Server"
-    echo "  3. Configure the Web Adapters after installing respective components"
+    echo "  2. Tomcat Manager: https://<your_server>/manager/html"
+    echo "     - Credentials saved in /root/tomcat-credentials.txt"
+    echo "  3. Install Portal for ArcGIS and/or ArcGIS Server"
+    echo "  4. Configure the Web Adapters after installing respective components"
     echo ""
     print_warning "Do NOT configure Web Adapters until Portal/Server are installed!"
+    print_warning "Remote access to Tomcat Manager is enabled - secure your credentials!"
     echo ""
 }
 

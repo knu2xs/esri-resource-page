@@ -144,3 +144,32 @@ sudo systemctl restart tomcat
 ```bash
 openssl s_client -connect localhost:443 -showcerts
 ```
+
+### Web Applications Not Accessible (404 Error)
+
+If the portal and server webapps return 404 errors even though the WAR files are deployed, check if the directories were properly unpacked:
+
+```bash
+# Check if directories have content
+sudo ls -la /var/opt/tomcat/webapps/portal/
+sudo ls -la /var/opt/tomcat/webapps/server/
+```
+
+If these directories are empty, Tomcat didn't auto-deploy the WAR files (this happens if directories were pre-created). To fix:
+
+```bash
+# Stop Tomcat
+sudo systemctl stop tomcat
+
+# Remove empty directories
+sudo rm -rf /var/opt/tomcat/webapps/portal /var/opt/tomcat/webapps/server
+
+# Start Tomcat (it will auto-deploy the WAR files)
+sudo systemctl start tomcat
+
+# Verify deployment (wait a few seconds for deployment)
+sleep 5
+curl -k https://localhost/portal/ -I  # Should return 302 redirect
+curl -k https://localhost/server/ -I  # Should return 302 redirect
+```
+
