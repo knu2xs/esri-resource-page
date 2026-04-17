@@ -16,6 +16,7 @@ This is largely a list of bookmarks I want to have redily accessible. In all hon
 ### Resources
 
 - [ArcGIS Enterprise Reporter](https://github.com/EsriPS/gisenterprisereporter)
+- [MXD to APRX using Python](https://support.esri.com/en-us/knowledge-base/automating-map-documents-mxd-to-arcgis-pro-projects-apr-000033590)
 
 ## References
 

@@ -37,6 +37,14 @@ sudo useradd -s /bin/false -m -U arcgis
 - `-U` — Creates a group with the same name as the user
 - `arcgis` — The username
 
+!!! warning "ArcGIS User in Web-Servics Group"
+
+    If you are installing ArcGIS Web Adaptor on the same instance as Portal for ArcGIS, ensure the `arcgis` user is added to the `web-services` group to avoid permission issues with the installation directory.
+
+    ``` bash
+    sudo usermod -aG web-services arcgis
+    ```
+
 ### Create the Installation Directories
 
 Create the installation directory for ArcGIS Enterprise software following the [Filesystem Hierarchy Standard](https://refspecs.linuxbase.org/FHS_3.0/fhs-3.0.html#optOptionalApplicationSoftwarePackages) and set ownership and permissions for the `arcgis` user.
@@ -45,6 +53,7 @@ Based on FHS, application software should be installed in `/opt`, variable data 
 
 - `/opt/arcgis/portal` — Application binaries (read-only)
 - `/var/opt/arcgis/portal` — Variable data
+- `/var/log/arcgis/portal` — Log files for Portal (created in the next section)
 - `/var/opt/arcgis/portal/content` — Content directory for Portal data
 - `/etc/opt/arcgis/portal` — Configuration files (read-only for non-root users in the `arcgis` group)
 
@@ -56,6 +65,10 @@ sudo chmod 750 /opt/arcgis/portal
 sudo mkdir -p /var/opt/arcgis/portal/content
 sudo chown -R arcgis:arcgis /var/opt/arcgis
 sudo chmod 750 /var/opt/arcgis
+
+sudo mkdir -p /var/log/arcgis/portal
+sudo chown -R root:arcgis /var/log/arcgis
+sudo chmod 775 -R /var/log/arcgis
 
 sudo mkdir -p /etc/opt/arcgis/portal
 sudo chown root:arcgis /etc/opt/arcgis
@@ -278,14 +291,6 @@ sudo /opt/arcgis/portal/tools/createportal/createportal.sh \
 ## Move Log Files to `var/log/arcgis/portal/`
 
 By default, Portal for ArcGIS stores its log files in the installation directory under `/opt/arcgis/portal/logs`. To follow best practices and keep variable data, specifically logfiles, in `/var/log`, we will move the log files to `/var/log/arcgis/portal/` and create a symbolic link.
-
-Create the new logs directory in `/var/log`.
-
-``` bash
-sudo mkdir -p /var/log/arcgis/portal
-sudo chown -R arcgis:arcgis /var/log/arcgis/portal
-sudo chmod 755 /var/log/arcgis/portal
-```
 
 Use the REST API to update the log location using the script installed in tools with Portal.
 

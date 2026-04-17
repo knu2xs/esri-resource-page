@@ -21,7 +21,7 @@ sudo mkdir -p /mnt/software
 Mount the Esri software share (you'll be prompted for your password):
 
 ``` bash
-sudo mount -t cifs //RED-INF-DCT-P05.esri.com/software/Esri/Released /mnt/software -o username=YOUR_USERNAME,domain=ESRI.com
+sudo mount -t cifs //RED-INF-DCT-P05.esri.com/software/Esri/Released /mnt/software -o domain=ESRI.com, username=YOUR_USERNAME
 ```
 
 Replace `YOUR_USERNAME` with your Esri username (without @esri.com). You'll be prompted to enter your password.

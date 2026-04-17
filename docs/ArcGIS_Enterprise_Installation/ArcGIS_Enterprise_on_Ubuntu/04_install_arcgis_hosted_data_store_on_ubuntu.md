@@ -26,29 +26,27 @@ Reference: [Ports used by ArcGIS Data Store](https://enterprise.arcgis.com/en/da
 If you haven't already done so, create the `arcgis` user and group that will own and run ArcGIS Server. This example creates the `arcgis` user with a home directory of `/opt/arcgis`, so everything related to ArcGIS software is contained within the `/opt/arcgis` directory.
 
 ``` bash
-sudo groupadd arcgis
-sudo useradd -g arcgis -d /opt/arcgis arcgis
+sudo useradd -s /bin/false -m -U arcgis
 sudo mkdir /opt/arcgis
 sudo chown arcgis:arcgis /opt/arcgis
 sudo chmod 755 /opt/arcgis
 ```
 
-Optionally, copy the bash profile to the new user's home directory.
-
-``` bash
-sudo cp ~/.bashrc /opt/arcgis/.bashrc
-sudo chown arcgis:arcgis /opt/arcgis/.bashrc
-```
-
 ## Set File Handle Limits
 
-Set the lower file handle limits for the `arcgis` user by editing the `/etc/security/limits.conf` file.
+Set the file handle limits for the `arcgis` user to ensure Portal for ArcGIS can handle multiple concurrent connections, REST API requests, and caching operations. Create a dedicated configuration file in `/etc/security/limits.d/` to set these limits:
 
 ``` bash
-sudo nano /etc/security/limits.conf
+echo -e "arcgis\tsoft\tnofile\t65536\narcgis\thard\tnofile\tunlimited" | sudo tee /etc/security/limits.d/arcgis.conf
 ```
 
-Add the following lines to the end of the file:
+Alternatively, you can create the file manually:
+
+``` bash
+sudo nano /etc/security/limits.d/arcgis.conf
+```
+
+Add the following lines:
 
 ``` bash
 arcgis           soft    nofile          65536

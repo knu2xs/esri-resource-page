@@ -46,14 +46,16 @@ Based on FHS, application software should be installed in `/opt`, variable data 
 
 ``` bash
 sudo mkdir -p /opt/arcgis/server
-sudo chown arcgis:arcgis /opt/arcgis/server
+sudo chown -R arcgis:arcgis /opt/arcgis/
 sudo chmod 750 /opt/arcgis/server
+
 sudo mkdir -p /var/opt/arcgis/server
-sudo chown arcgis:arcgis /var/opt/arcgis
+sudo chown -R arcgis:arcgis /var/opt/arcgis
 sudo chmod 750 /var/opt/arcgis
+
 sudo mkdir -p /etc/opt/arcgis/server
 sudo chown root:arcgis /etc/opt/arcgis
-sudo chmod 750 /etc/opt/arcgis
+sudo chmod -R 750 /etc/opt/arcgis
 ```
 
 #### Extend the Volumes (if necessary)
@@ -69,7 +71,7 @@ df -h /opt
 There needs to be at least 20 GB of free space to install Portal for ArcGIS. If there is not enough space, extend the logical volume. When installing, I discovered only 20GB is allocated by default, so I extended it by an additional 10GB to have enough capacity.
 
 ``` bash
-sudo lvextend -L +10G /opt --resizefs
+sudo lvextend -L +20G /dev/mapper/vg_os-lv_var --resizefs
 ```
 
 Since we are going to be using the `/var` volume for Portal data, also check the available space on the `/var` volume.
@@ -168,7 +170,7 @@ Now, run the ArcGIS Server installer as the `arcgis` user.
 
 Reference: [Authorize ArcGIS Server Silently](https://enterprise.arcgis.com/en/server/latest/install/linux/silently-install-arcgis-server.htm#ESRI_SECTION1_49ED6300B7144B35BFF3AB749743EB5F)
 
-The `-a` parameter used when installing above specifies the path to the authorization file copied earlier. If included in the installation command, the software will be authorized automatically during installation. 
+The `-a` parameter used when installing above specifies the path to the authorization file copied earlier. If included in the installation command, the software will be authorized automatically during installation.
 
 However, if you need to authorize the software later, you can do so using the `authorizeSoftware` command after installation. This also works if you need to update the authorization later.
 
