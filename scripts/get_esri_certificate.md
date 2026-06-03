@@ -106,3 +106,125 @@ openssl pkcs12 -in tomcat_fullchain.pfx -info -passin pass:'YourPassword'
 ```bash
 openssl pkcs12 -in tomcat_fullchain.pfx -nokeys -passin pass:'YourPassword' | openssl x509 -noout -text
 ```
+
+---
+
+## PowerShell: Retrieve Certificate and Bind to IIS
+
+The following self-contained PowerShell script retrieves the machine certificate from
+certifactory, installs the full certificate chain into the Windows certificate store, and
+binds the certificate to the **Default Web Site** in IIS on port 443.
+
+**Prerequisites**
+
+- Run as **Administrator**
+- Machine must be on the **Esri internal network**
+- IIS must be installed with the `WebAdministration` module available
+  (`Install-WindowsFeature Web-Server` installs both IIS and the module)
+
+```powershell
+#Requires -Version 5.1
+#Requires -RunAsAdministrator
+
+param(
+    [string]$MachineName = $env:COMPUTERNAME,
+    [string]$Password    = 'EsriRocks!',
+    [string]$SiteName    = 'Default Web Site',
+    [int]   $Port        = 443
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+
+# Strip .esri.com suffix — certifactory rejects FQDNs
+$MachineName = $MachineName -replace '\.esri\.com$', ''
+
+# ---------------------------------------------------------------------------
+# Download certificates to a temporary directory
+# ---------------------------------------------------------------------------
+$TempDir = Join-Path $env:TEMP "esricerts_$(Get-Random)"
+New-Item -ItemType Directory -Path $TempDir -Force | Out-Null
+
+$EncodedPassword = [Uri]::EscapeDataString($Password)
+$PfxUrl          = "https://certifactory.esri.com/api/$MachineName.pfx?password=$EncodedPassword"
+$IssuingCaUrl    = 'http://esri_pki.esri.com/crl/Esri%20Issuing%20CA.crt'
+$RootCaUrl       = 'https://certifactory.esri.com/api/caroot.crt'
+
+$PfxFile       = Join-Path $TempDir "$MachineName.pfx"
+$IssuingCaFile = Join-Path $TempDir 'EsriIssuingCA.cer'
+$RootCaFile    = Join-Path $TempDir 'EsriRootCA.cer'
+
+Write-Host '[*] Downloading machine certificate...'        -ForegroundColor Cyan
+Invoke-WebRequest -Uri $PfxUrl       -OutFile $PfxFile       -UseBasicParsing
+Write-Host '[*] Downloading Esri Issuing CA certificate...' -ForegroundColor Cyan
+Invoke-WebRequest -Uri $IssuingCaUrl -OutFile $IssuingCaFile -UseBasicParsing
+Write-Host '[*] Downloading Esri Root CA certificate...'   -ForegroundColor Cyan
+Invoke-WebRequest -Uri $RootCaUrl    -OutFile $RootCaFile    -UseBasicParsing
+
+# ---------------------------------------------------------------------------
+# Install certificates into Windows certificate stores
+# ---------------------------------------------------------------------------
+Write-Host '[*] Installing certificates...' -ForegroundColor Cyan
+$SecurePassword = ConvertTo-SecureString $Password -AsPlainText -Force
+
+# Machine PFX -> Personal (My) store — includes the private key
+$MachCert = Import-PfxCertificate `
+    -FilePath          $PfxFile `
+    -CertStoreLocation 'Cert:\LocalMachine\My' `
+    -Password          $SecurePassword
+Write-Host "    Machine cert thumbprint : $($MachCert.Thumbprint)" -ForegroundColor Green
+
+# Issuing CA -> Intermediate Certification Authorities store
+Import-Certificate -FilePath $IssuingCaFile `
+    -CertStoreLocation 'Cert:\LocalMachine\CA'   | Out-Null
+Write-Host '    Esri Issuing CA installed.' -ForegroundColor Green
+
+# Root CA -> Trusted Root Certification Authorities store
+Import-Certificate -FilePath $RootCaFile `
+    -CertStoreLocation 'Cert:\LocalMachine\Root' | Out-Null
+Write-Host '    Esri Root CA installed.'   -ForegroundColor Green
+
+# ---------------------------------------------------------------------------
+# Configure the IIS HTTPS binding on the specified site and port
+# ---------------------------------------------------------------------------
+Write-Host "[*] Configuring IIS HTTPS binding on '$SiteName' port $Port..." -ForegroundColor Cyan
+Import-Module WebAdministration -ErrorAction Stop
+
+# Remove any pre-existing HTTPS binding on this port to avoid duplicates
+$ExistingBinding = Get-WebBinding -Name $SiteName -Protocol 'https' -Port $Port `
+    -ErrorAction SilentlyContinue
+if ($ExistingBinding) {
+    Remove-WebBinding -Name $SiteName -Protocol 'https' -Port $Port
+    Write-Host "    Removed existing HTTPS binding on port $Port." -ForegroundColor Yellow
+}
+
+# Create the new HTTPS binding then attach the certificate
+New-WebBinding -Name $SiteName -Protocol 'https' -Port $Port -IPAddress '*' -SslFlags 0
+$Binding = Get-WebBinding -Name $SiteName -Protocol 'https' -Port $Port
+$Binding.AddSslCertificate($MachCert.Thumbprint, 'My')
+Write-Host "    HTTPS binding created and certificate attached." -ForegroundColor Green
+
+# ---------------------------------------------------------------------------
+# Clean up temporary files and report
+# ---------------------------------------------------------------------------
+Remove-Item -Path $TempDir -Recurse -Force
+
+Write-Host ''
+Write-Host 'Done.' -ForegroundColor White
+Write-Host "  Site       : $SiteName"
+Write-Host "  Port       : $Port"
+Write-Host "  Thumbprint : $($MachCert.Thumbprint)"
+```
+
+**Running the script**
+
+```powershell
+# Defaults: current machine name, port 443, Default Web Site
+.\install_iis_certificate.ps1
+
+# Override machine name and password
+.\install_iis_certificate.ps1 -MachineName myserver -Password 'S3cret!'
+
+# Target a different site or port
+.\install_iis_certificate.ps1 -SiteName 'My Site' -Port 8443
+```
