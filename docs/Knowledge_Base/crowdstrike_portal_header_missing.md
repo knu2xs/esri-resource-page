@@ -185,4 +185,4 @@ Respectfully,
 -   Missing Portal header/navigation is a **strong indicator of EDR interference**
 -   The issue is **not a UI bug**, but an infrastructure/security interaction problem
 -   Resolution requires **security configuration changes**, not ArcGIS changes
--   Early detection saves significant troubleshooting time
+-   Early detection saves significant troubleshooting timeDirektoriekDirektoriek
