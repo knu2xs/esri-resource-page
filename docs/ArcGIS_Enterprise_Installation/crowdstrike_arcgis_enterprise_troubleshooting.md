@@ -1,3 +1,6 @@
+---
+title: ArcGIS Enterprise and CrowdStrike EDR Interference
+---
 # ArcGIS Enterprise and CrowdStrike EDR Interference: Troubleshooting, Remediation, and Security Escalation
 
 ## Purpose
