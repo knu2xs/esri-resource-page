@@ -70,7 +70,10 @@ https://dhitsgolwebip31.intra.dhs.ca.gov/portal
 
 2. Run `Setup.exe` as administrator.
 
-3. Run the datastore update wizard (`https://localhost:2443/arcgis/datastore/upgrade`).
+3. Run the datastore update wizard
+    ```
+    https://localhost:2443/arcgis/datastore/upgrade`
+    ```
 
 	* hosting server
 	```
