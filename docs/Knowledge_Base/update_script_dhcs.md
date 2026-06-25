@@ -72,7 +72,7 @@ https://dhitsgolwebip31.intra.dhs.ca.gov/portal
 
 3. Run the datastore update wizard
     ```
-    https://localhost:2443/arcgis/datastore/upgrade`
+    https://localhost:2443/arcgis/datastore/upgrade
     ```
 
 	* hosting server
