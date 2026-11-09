@@ -7,12 +7,15 @@ The ArcGIS Web Adaptor version must match the ArcGIS Enterprise version it conne
 ## References
 
 - [ArcGIS Web Adaptor 11.5 for Java on Linux: installation](https://enterprise.arcgis.com/en/web-adaptor/11.5/install/java-linux/install-arcgis-web-adaptor.htm)
+- [ArcGIS Web Adaptor 11.5: silent installation options](https://enterprise.arcgis.com/en/web-adaptor/11.5/install/java-linux/install-arcgis-web-adaptor-silently.htm)
 - [ArcGIS Web Adaptor 11.5 system requirements](https://enterprise.arcgis.com/en/web-adaptor/11.5/install/java-linux/arcgis-web-adaptor-system-requirements.htm)
 - [Red Hat Enterprise Linux 9: firewalld](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/configuring_firewalls_and_packet_filters/index)
 - [Red Hat Enterprise Linux 9: SELinux](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/using_selinux/index)
 - [Filesystem Hierarchy Standard](https://refspecs.linuxbase.org/FHS_3.0/fhs-3.0.html)
 - [systemd service execution settings](https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html)
-- [Apache Tomcat 10.1 documentation](https://tomcat.apache.org/tomcat-10.1-doc/)
+- [Apache Tomcat 10.1: Running Tomcat](https://tomcat.apache.org/tomcat-10.1-doc/RUNNING.txt)
+- [Apache Tomcat 10.1: HTTP Connector configuration](https://tomcat.apache.org/tomcat-10.1-doc/config/http.html)
+- [Apache Tomcat 9.0: Running Tomcat](https://tomcat.apache.org/tomcat-9.0-doc/RUNNING.txt)
 
 ## 1. Prepare the RHEL host
 
@@ -22,7 +25,7 @@ Schedule operating-system updates through your normal maintenance process. Updat
 sudo dnf check-update
 ```
 
-Install the Java release selected from the ArcGIS Web Adaptor 11.5 compatibility requirements. This example installs OpenJDK 17; use the corresponding package if your supported Tomcat configuration requires Java 8 or 11.
+Install a Java version supported by ArcGIS Web Adaptor 11.5 and the chosen Tomcat release. The ArcGIS 11.5 requirements list Java 8, 11, and 17. Tomcat 10.1 itself requires Java 11 or later, so use Java 11 or 17 with Tomcat 10.1; Tomcat 9.0 can be used with a Java version supported by both products.
 
 ```bash
 sudo dnf install java-17-openjdk-headless tar gzip curl policycoreutils-python-utils
@@ -39,7 +42,7 @@ sudo chmod 0750 /var/lib/web-services
 
 ## 2. Configure the firewall
 
-Use the active firewalld zone for the host's network interface. Esri's installation prerequisites call for a website on HTTP port 80 and HTTPS port 443. Provide both ports according to your web-server architecture; this Tomcat example configures HTTPS on 443, while HTTP/80 may be handled by a front-end web server or a separately configured Tomcat connector. Open HTTPS for Web Adaptor traffic and HTTP only if your site requires it. Do not expose Tomcat's default port 8080 to the public network; use it for local testing or restrict it to a trusted management network.
+Use the active firewalld zone for the host's network interface. Esri's installation prerequisites call for a website on HTTP port 80 and HTTPS port 443. Provide both ports according to your web-server architecture. This guide configures Tomcat for HTTPS on 443; serve HTTP on port 80 through a front-end web server or configure a separate Tomcat connector if required. Do not expose Tomcat's default port 8080 to the public network; use it for local testing or restrict it to a trusted management network.
 
 ```bash
 sudo firewall-cmd --get-active-zones
@@ -49,7 +52,6 @@ Replace `public` below if the active interface uses a different zone:
 
 ```bash
 sudo firewall-cmd --permanent --zone=public --add-service=https
-# Optional: enable only if HTTP is intentionally served or redirected.
 sudo firewall-cmd --permanent --zone=public --add-service=http
 sudo firewall-cmd --reload
 sudo firewall-cmd --zone=public --list-all
@@ -59,7 +61,7 @@ Do not enable or replace the host firewall policy as part of this procedure. Add
 
 ## 3. Install Apache Tomcat
 
-Choose a Tomcat patch release supported by ArcGIS Web Adaptor 11.5 and compatible with the selected Java version. Download the binary archive and its checksum from the official [Apache Tomcat downloads](https://tomcat.apache.org/download-10.cgi) page. Verify the archive using the checksum published by Apache before extracting it.
+Choose a Tomcat patch release supported by ArcGIS Web Adaptor 11.5 and compatible with the selected Java version. Download the binary archive and its checksum from the official [Apache Tomcat 10 downloads](https://tomcat.apache.org/download-10.cgi) page, or the [Apache Tomcat 9 downloads](https://tomcat.apache.org/download-90.cgi) page. Verify the archive using the checksum published by Apache before extracting it.
 
 This example uses Tomcat 10.1. Replace `<version>` with the exact supported patch version. For Tomcat 9.0.x, use the corresponding Apache Tomcat 9 download location instead.
 
@@ -73,9 +75,8 @@ sha512sum apache-tomcat-<version>.tar.gz
 Use the FHS-oriented locations below: application binaries under `/opt`, configuration under `/etc/opt`, runtime files under `/var/opt`, and logs under `/var/log`.
 
 ```bash
-sudo install -d -o root -g web-services -m 0750 /opt/tomcat /etc/opt
-sudo install -d -o web-services -g web-services -m 0750 /var/opt
-sudo install -d -o web-services -g web-services -m 0750 /var/log
+sudo install -d -o root -g web-services -m 0750 /opt/tomcat
+sudo mkdir -p /etc/opt
 
 sudo tar -xzf /tmp/apache-tomcat-<version>.tar.gz \
   -C /opt/tomcat --strip-components=1
@@ -108,7 +109,7 @@ dirname "$(dirname "$JAVA_BIN")"
 
 ### Create the Tomcat systemd service
 
-Create `/etc/systemd/system/tomcat.service` with root ownership. Set `JAVA_HOME` to the path reported in the previous step.
+Create `/etc/systemd/system/tomcat.service` with root ownership. This unit uses Tomcat's documented foreground startup mode (`catalina.sh run`), which lets systemd supervise the Tomcat process directly. Set `JAVA_HOME` to the path reported in the previous step.
 
 ```ini
 [Unit]
@@ -149,6 +150,10 @@ sudo systemctl status tomcat --no-pager
 ```
 
 Tomcat runs as the unprivileged `web-services` account. `CAP_NET_BIND_SERVICE` allows the service to bind to port 443 without running as root. Keep SELinux in enforcing mode. If SELinux denies Tomcat access to the configured certificate, port, or runtime directories, review the denial and apply an administrator-approved policy adjustment; do not disable SELinux or apply a broad permissive rule. An alternative is to terminate HTTPS in a supported front-end web server and proxy to Tomcat on a private interface.
+
+!!! important "Esri registration permission requirement"
+
+    Esri's 11.5 installation requirements state that Tomcat or the application server must be started with administrative permissions, or registration of the Web Adaptor with ArcGIS Server may fail. The least-privilege systemd unit above runs Tomcat as `web-services`, not as root, and therefore does not automatically meet that stated prerequisite. Before using this service configuration for a production ArcGIS Server registration, verify the required permissions for your deployment with Esri's current 11.5 documentation or Esri Support. Do not solve this by running Tomcat permanently as root; apply only a specifically documented and security-approved permission model.
 
 Confirm Tomcat responds locally before adding the Web Adaptor:
 
@@ -201,20 +206,19 @@ If Tomcat cannot bind port 443 under SELinux, inspect the AVC denial and the cur
 Download the Linux Java-platform Web Adaptor 11.5 installer from your authorized Esri software download location. Save the downloaded archive as `/tmp/web-adaptor-11.5-installer.tar.gz`, then extract it to a dedicated temporary directory.
 
 ```bash
-sudo install -d -o root -g root -m 0755 /opt/arcgis
 mkdir -p /tmp/web-adaptor-11.5
 tar -xzf /tmp/web-adaptor-11.5-installer.tar.gz \
   -C /tmp/web-adaptor-11.5
 ```
 
-Run the Linux setup program with administrative privileges. The installer may provide the executable as `Setup` or `Setup.sh`; use the name present in the extracted media. For a silent installation:
+Run the Linux setup program with administrative privileges. Esri's silent-install instructions provide the executable as `Setup`; the interactive installation program is named `Setup.sh`. This example uses the documented silent installer options:
 
 ```bash
 cd /tmp/web-adaptor-11.5
-sudo ./Setup -m silent -l yes -d /opt/arcgis
+sudo ./Setup -m silent -l yes -d /opt
 ```
 
-If the setup executable is named `Setup.sh`, run `sudo ./Setup.sh` with the same options. Consult the installer's help or the Esri installation page if the media's command-line options differ.
+The installer appends `/arcgis/webadaptor11.5` to the directory passed with `-d`; with `/opt`, the default installation directory is `/opt/arcgis/webadaptor11.5`. If using the interactive installer instead, run `sudo ./Setup.sh` and follow the prompts, selecting a local installation directory. Do not install to a remote network drive.
 
 ## 6. Deploy Portal and Server Web Adaptor instances
 
@@ -225,7 +229,7 @@ Use the WAR file that matches your Tomcat major version:
 | Tomcat 10.1.x | `arcgis_tomcat10.war` |
 | Tomcat 9.0.x | `arcgis.war` |
 
-Find the WAR file under the Web Adaptor installation directory. For Tomcat 10.1.x, for example:
+Find the WAR file under the Web Adaptor installation directory. Esri specifies `arcgis_tomcat10.war` for Tomcat 10.1.x and `arcgis.war` for Tomcat 9.0.x and other Java application servers. For Tomcat 10.1.x:
 
 ```bash
 sudo find /opt/arcgis -type f -name 'arcgis_tomcat10.war' -print
@@ -234,16 +238,21 @@ sudo find /opt/arcgis -type f -name 'arcgis_tomcat10.war' -print
 Deploy one instance for Portal for ArcGIS and a separately named instance for ArcGIS Server. The context names below (`portal` and `server`) must be unique on this Tomcat host. Replace the source path with the path returned by `find`.
 
 ```bash
-WAR=/opt/arcgis/webadaptor11.5/java/arcgis_tomcat10.war
-sudo install -o web-services -g web-services -m 0640 "$WAR" \
+WAR_FILE=$(sudo find /opt/arcgis/webadaptor11.5 -type f \
+  -name 'arcgis_tomcat10.war' -print -quit)
+if [[ -z "$WAR_FILE" ]]; then
+  echo "Tomcat 10 WAR not found" >&2
+  exit 1
+fi
+sudo install -o web-services -g web-services -m 0640 "$WAR_FILE" \
   /var/opt/tomcat/webapps/portal.war
-sudo install -o web-services -g web-services -m 0640 "$WAR" \
+sudo install -o web-services -g web-services -m 0640 "$WAR_FILE" \
   /var/opt/tomcat/webapps/server.war
 sudo systemctl restart tomcat
 sudo journalctl -u tomcat -b --no-pager
 ```
 
-For Tomcat 9.0.x, use `arcgis.war` in the `WAR` path instead. Confirm the deployment in the Tomcat log and test the contexts over HTTPS:
+For Tomcat 9.0.x, change the `find` command to search for `arcgis.war` instead of `arcgis_tomcat10.war`. Confirm the deployment in the Tomcat log and test the contexts over HTTPS:
 
 ```bash
 curl -kI https://localhost/portal/
